@@ -187,7 +187,12 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
       <div className=" max-w-[80vw] mx-auto">
-        <h1 className="text-3xl font-bold mb-4 text-center">EV Telematics Hub</h1>
+      <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
+        <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
+          EV Telematics Hub
+        </span>
+      </h1>
+
 
         {/* Chart Section */}
         <section className="bg-[var(--background)] shadow-md rounded p-4 mb-8">
