@@ -159,7 +159,7 @@ export default function Home() {
         setCommandLoading(false);
       })
       .catch(() => {
-        setError("Failed to send command");
+        setError("Failed to send command"); //no change
         setCommandLoading(false);
       });
   };
