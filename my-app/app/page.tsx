@@ -29,6 +29,8 @@ type ParamItem = {
   value: string;
 };
 
+type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
+
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
   const [filteredData, setFilteredData] = useState<DataItem[]>([]);
@@ -40,6 +42,7 @@ export default function Home() {
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>("7d");
   const [chartData, setChartData] = useState<ChartData<"line">>({
     labels: [],
     datasets: [],
@@ -68,6 +71,34 @@ export default function Home() {
       });
   }, []);
 
+  // Update date range based on selected timeRange if not custom.
+  useEffect(() => {
+    if (timeRange !== "custom") {
+      const now = new Date();
+      let newStart: Date | null = null;
+      switch (timeRange) {
+        case "24hr":
+          newStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case "7d":
+          newStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "1m":
+          newStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          break;
+        case "1y":
+          newStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+          break;
+        case "all":
+        default:
+          newStart = null;
+      }
+      setStartDate(newStart);
+      setEndDate(now);
+    }
+  }, [timeRange]);
+
+  // Filter data based on devices and date range.
   useEffect(() => {
     let filtered = data;
     if (!selectedDevices.includes("all")) {
@@ -75,17 +106,18 @@ export default function Home() {
     }
     if (startDate) {
       filtered = filtered.filter(
-        (item) => new Date(Number(item.timestamp) * 1000) >= startDate
+        (item) => new Date(Number(item.timestamp) * 1000) >= startDate!
       );
     }
     if (endDate) {
       filtered = filtered.filter(
-        (item) => new Date(Number(item.timestamp) * 1000) <= endDate
+        (item) => new Date(Number(item.timestamp) * 1000) <= endDate!
       );
     }
     setFilteredData(filtered);
   }, [data, selectedDevices, startDate, endDate]);
 
+  // Update chartData when filteredData or chartFields change.
   useEffect(() => {
     if (filteredData.length === 0) {
       setChartData({ labels: [], datasets: [] });
@@ -159,7 +191,7 @@ export default function Home() {
         setCommandLoading(false);
       })
       .catch(() => {
-        setError("Failed to send command"); //no change
+        setError("Failed to send command");
         setCommandLoading(false);
       });
   };
@@ -186,17 +218,94 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
-      <div className=" max-w-[80vw] mx-auto">
-      <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
-        <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
-          EV Telematics Hub
-        </span>
-      </h1>
-
+      <div className="max-w-[80vw] mx-auto">
+        <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
+          <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
+            EV Telematics Hub
+          </span>
+        </h1>
 
         {/* Chart Section */}
         <section className="bg-[var(--background)] shadow-md rounded p-4 mb-8">
           <h2 className="text-2xl font-semibold mb-4">Data Chart</h2>
+          {/* Time Range Selection */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { label: "24hr", value: "24hr" },
+              { label: "7 Day", value: "7d" },
+              { label: "1 Month", value: "1m" },
+              { label: "1 Year", value: "1y" },
+              { label: "All Time", value: "all" },
+              { label: "Custom", value: "custom" },
+            ].map((range) => (
+              <button
+                key={range.value}
+                onClick={() => setTimeRange(range.value as TimeRange)}
+                className={`px-3 py-1 rounded text-sm ${
+                  timeRange === range.value
+                    ? "bg-blue-600 text-white border-transparent"
+                    : "bg-gray-200 text-black border border-gray-300"
+                }`}
+              >
+                {range.label}
+              </button>
+            ))}
+          </div>
+          {/* Date Pickers (active only if "Custom" is selected) */}
+          {timeRange === "custom" && (
+            <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
+              <div className="flex-1 mb-4 md:mb-0">
+                <label className="block text-sm font-medium mb-1">Start Date</label>
+                <DatePicker
+                  selected={startDate}
+                  onChange={(date) => {
+                    setStartDate(date);
+                    setTimeRange("custom");
+                  }}
+                  selectsStart
+                  startDate={startDate}
+                  endDate={endDate}
+                  className="w-full p-2 border rounded"
+                  placeholderText="Select start date"
+                  showTimeSelect
+                  dateFormat="Pp"
+                  popperPlacement="bottom-start"
+                />
+              </div>
+              <div className="flex-1 mb-4 md:mb-0">
+                <label className="block text-sm font-medium mb-1">End Date</label>
+                <DatePicker
+                  selected={endDate}
+                  onChange={(date) => {
+                    setEndDate(date);
+                    setTimeRange("custom");
+                  }}
+                  selectsEnd
+                  startDate={startDate}
+                  endDate={endDate}
+                  minDate={startDate ?? undefined}
+                  className="w-full p-2 border rounded"
+                  placeholderText="Select end date"
+                  showTimeSelect
+                  dateFormat="Pp"
+                  popperPlacement="bottom-start"
+                />
+              </div>
+              <div className="flex items-center">
+                <button
+                  onClick={() => {
+                    setStartDate(null);
+                    setEndDate(null);
+                    setTimeRange("all");
+                  }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                >
+                  Clear Dates
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
             <div className="flex-1 mb-4 md:mb-0">
               <label className="block text-sm font-medium mb-1">Device Filter</label>
@@ -221,14 +330,12 @@ export default function Home() {
                           ? "bg-blue-600 text-white border-transparent"
                           : "bg-gray-200 text-black border border-gray-300"
                       }`}
-                      
                     >
                       {device}
                     </button>
                   );
                 })}
               </div>
-
             </div>
             <div className="flex-1 mb-4 md:mb-0">
               <label className="block text-sm font-medium mb-1">Chart Field</label>
@@ -249,57 +356,13 @@ export default function Home() {
                           ? "bg-blue-600 text-white border-transparent"
                           : "bg-gray-200 text-black border border-gray-300"
                       }`}
-                      
                     >
                       {field}
                     </button>
                   );
                 })}
               </div>
-
             </div>
-            <div className="flex-1 mb-4 md:mb-0">
-              <label className="block text-sm font-medium mb-1">Start Date</label>
-              <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)}
-                selectsStart
-                startDate={startDate}
-                endDate={endDate}
-                className="w-full p-2 border rounded"
-                placeholderText="Select start date"
-                showTimeSelect
-                dateFormat="Pp"
-                popperPlacement="bottom-start"
-              />
-            </div>
-            <div className="flex-1 mb-4 md:mb-0">
-              <label className="block text-sm font-medium mb-1">End Date</label>
-              <DatePicker
-                selected={endDate}
-                onChange={(date) => setEndDate(date)}
-                selectsEnd
-                startDate={startDate}
-                endDate={endDate}
-                minDate={startDate ?? undefined}
-                className="w-full p-2 border rounded"
-                placeholderText="Select end date"
-                showTimeSelect
-                dateFormat="Pp"
-                popperPlacement="bottom-start"
-              />
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 mb-4">
-            <button
-              onClick={() => {
-                setStartDate(null);
-                setEndDate(null);
-              }}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
-            >
-              Clear Dates
-            </button>
           </div>
           {loading ? (
             <p>Loading data...</p>
