@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import DataChart1 from "./components/DataChart1";
 import { Line } from "react-chartjs-2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -225,168 +226,15 @@ export default function Home() {
           </span>
         </h1>
 
-        {/* Chart Section */}
-        <section className="bg-[var(--background)] shadow-md rounded p-4 mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Data Chart</h2>
-          {/* Time Range Selection */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {[
-              { label: "24hr", value: "24hr" },
-              { label: "7 Day", value: "7d" },
-              { label: "1 Month", value: "1m" },
-              { label: "1 Year", value: "1y" },
-              { label: "All Time", value: "all" },
-              { label: "Custom", value: "custom" },
-            ].map((range) => (
-              <button
-                key={range.value}
-                onClick={() => setTimeRange(range.value as TimeRange)}
-                className={`px-3 py-1 rounded text-sm ${
-                  timeRange === range.value
-                    ? "bg-blue-600 text-white border-transparent"
-                    : "bg-gray-200 text-black border border-gray-300"
-                }`}
-                
-                
-                
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-          {/* Date Pickers (active only if "Custom" is selected) */}
-          {timeRange === "custom" && (
-            <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
-              <div className="flex-1 mb-4 md:mb-0">
-                <label className="block text-sm font-medium mb-1">Start Date</label>
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => {
-                    setStartDate(date);
-                    setTimeRange("custom");
-                  }}
-                  selectsStart
-                  startDate={startDate}
-                  endDate={endDate}
-                  className="w-full p-2 border rounded"
-                  placeholderText="Select start date"
-                  showTimeSelect
-                  dateFormat="Pp"
-                  popperPlacement="bottom-start"
-                />  
-              </div>
-              <div className="flex-1 mb-4 md:mb-0">
-                <label className="block text-sm font-medium mb-1">End Date</label>
-                <DatePicker
-                  selected={endDate}
-                  onChange={(date) => {
-                    setEndDate(date);
-                    setTimeRange("custom");
-                  }}
-                  selectsEnd
-                  startDate={startDate}
-                  endDate={endDate}
-                  minDate={startDate ?? undefined}
-                  className="w-full p-2 border rounded"
-                  placeholderText="Select end date"
-                  showTimeSelect
-                  dateFormat="Pp"
-                  popperPlacement="bottom-start"
-                />
-              </div>
-              <div className="flex items-center">
-                <button
-                  onClick={() => {
-                    setStartDate(null);
-                    setEndDate(null);
-                    setTimeRange("all");
-                  }}
-                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
-                >
-                  Clear Dates
-                </button>
-              </div>
-            </div>
-          )}
 
-          <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
-            <div className="flex-1 mb-4 md:mb-0">
-              <label className="block text-sm font-medium mb-1">Device Filter</label>
-              <div className="flex flex-wrap gap-2">
-                {uniqueDevices.map((device) => {
-                  const selected = selectedDevices.includes(device);
-                  return (
-                    <button
-                      key={device}
-                      onClick={() => {
-                        if (device === "all") {
-                          setSelectedDevices(["all"]);
-                        } else {
-                          const newDevices = selected
-                            ? selectedDevices.filter((d) => d !== device)
-                            : [...selectedDevices.filter((d) => d !== "all"), device];
-                          setSelectedDevices(newDevices.length === 0 ? ["all"] : newDevices);
-                        }
-                      }}
-                      className={`px-3 py-1 rounded text-sm ${
-                        selected
-                          ? "bg-blue-600 text-white border-transparent"
-                          : "bg-gray-200 text-black border border-gray-300"
-                      }`}
-                      
-                    >
-                      {device}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex-1 mb-4 md:mb-0">
-              <label className="block text-sm font-medium mb-1">Chart Field</label>
-              <div className="flex flex-wrap gap-2">
-                {["data1", "data2", "data3"].map((field) => {
-                  const selected = chartFields.includes(field);
-                  return (
-                    <button
-                      key={field}
-                      onClick={() => {
-                        const newFields = selected
-                          ? chartFields.filter((f) => f !== field)
-                          : [...chartFields, field];
-                        setChartFields(newFields);
-                      }}
-                      className={`px-3 py-1 rounded text-sm ${
-                        selected
-                          ? "bg-blue-600 text-white border-transparent"
-                          : "bg-gray-200 text-black border border-gray-300"
-                      }`}
-                      
-                    >
-                      {field}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+        <div>
+            <main className="p-4">
+              <h1 className="text-3xl text-white mb-6 text-center">V1.0</h1>
+              <DataChart1 />
+            </main>
+   
           </div>
-          {loading ? (
-            <p>Loading data...</p>
-          ) : error ? (
-            <p className="text-red-500">{error}</p>
-          ) : (
-            <>
-              <Line data={chartData} />
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={downloadCSV}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                >
-                  Download CSV
-                </button>
-              </div>
-            </>
-          )}
-        </section>
+        
 
         {/* Command Injection Section */}
         <section className="bg-[var(--background)] shadow-md rounded p-4">
@@ -455,13 +303,22 @@ export default function Home() {
             {error && <p className="mt-2 text-red-600">{error}</p>}
           </form>
         </section>
-        <div className="w-full h-[800px] my-8 bg-transparent rounded">
+
+
+        
+        {/* <div className="w-full h-[800px] my-8 bg-transparent rounded">
           <iframe
-            src="http://localhost:3001"
+            src="https://masters-sub-chart.vercel.app"
             title="External Chart"
             className="w-full h-full border-none rounded bg-transparent"
           />
-        </div>
+        </div> */}
+
+
+
+
+
+
 
 
 
