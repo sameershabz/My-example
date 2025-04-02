@@ -165,8 +165,8 @@ function DataChart1() {
   }
 
   return (
-    <div style={{ padding: "2rem", boxSizing: "border-box" }}>
-      <div style={{ maxWidth: "80rem", margin: "0 auto" }}>
+    <div style={{ padding: "0rem", boxSizing: "border-box" }}>
+      <div style={{ maxWidth: "90rem", margin: "0 auto" }}>
       <h2 style={{ textAlign: "center", color: "white", fontSize: "2rem" }}>
         View Data Stream
         </h2>
@@ -178,13 +178,10 @@ function DataChart1() {
               <button
                 key={range.value}
                 onClick={() => setTimeRange(range.value as TimeRange)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  borderRadius: "0.25rem",
-                  border: "none",
-                  backgroundColor: timeRange === range.value ? "#2563eb" : "#e5e7eb",
-                  color: timeRange === range.value ? "white" : "black"
-                }}
+                className={`px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs rounded border-none ${
+                    timeRange === range.value ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+                  }`}
+                
               >
                 {range.label}
               </button>
@@ -228,22 +225,17 @@ function DataChart1() {
                 />
               </div>
               <div style={{ display: "flex", alignItems: "center" }}>
-                <button
-                  onClick={() => {
+              <button
+                onClick={() => {
                     setStartDate(null);
                     setEndDate(null);
                     setTimeRange("all");
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    backgroundColor: "#6b7280",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "0.25rem"
-                  }}
+                }}
+                className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs rounded bg-gray-600 text-white"
                 >
-                  Clear Dates
+                Clear Dates
                 </button>
+
               </div>
             </div>
           )}
@@ -265,13 +257,9 @@ function DataChart1() {
                       setSelectedDevices(newDevices.length === 0 ? ["all"] : newDevices);
                     }
                   }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.25rem",
-                    border: "none",
-                    backgroundColor: isSelected ? "#2563eb" : "#e5e7eb",
-                    color: isSelected ? "white" : "black"
-                  }}
+                  className={`px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs rounded border-none ${
+                    isSelected ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+                  }`}
                 >
                   {device}
                 </button>
@@ -292,13 +280,9 @@ function DataChart1() {
                       : [...chartFields, field];
                     setChartFields(newFields);
                   }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderRadius: "0.25rem",
-                    border: "none",
-                    backgroundColor: isSelected ? "#2563eb" : "#e5e7eb",
-                    color: isSelected ? "white" : "black"
-                  }}
+                  className={`px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs rounded border-none ${
+                    isSelected ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+                  }`}
                 >
                   {field}
                 </button>
@@ -310,7 +294,7 @@ function DataChart1() {
         {/* Chart Section */}
         <div style={{ margin: "2rem 0" }}>
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={filteredData} margin={{ left: 20, right: 20, top: 20, bottom: 130 }}>
+            <LineChart data={filteredData} margin={{ left: 0, right: 0, top: 20, bottom: 130 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="dateStr"
@@ -360,14 +344,8 @@ function DataChart1() {
                     a.click();
                     document.body.removeChild(a);
                     }}
-                    style={{
-                    padding: "0.75rem 1.5rem",
-                    backgroundColor: "#2563eb",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "0.25rem",
-                    cursor: "pointer"
-                    }}
+                    className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs bg-blue-600 text-white rounded cursor-pointer"
+
                 >
                     Download CSV
                 </button>

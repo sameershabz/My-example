@@ -219,7 +219,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
-      <div className="max-w-[80vw] mx-auto">
+      <div className="max-w-[90vw] mx-auto">
         <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
           <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
             EV Telematics Hub
@@ -284,7 +284,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleAddParam}
-                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
+                  className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs bg-blue-600 text-white rounded cursor-pointer"
                 >
                   Add Parameter
                 </button>
@@ -294,7 +294,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={commandLoading}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs bg-blue-600 text-white rounded cursor-pointer"
               >
                 {commandLoading ? "Sending..." : "Send Command"}
               </button>
