@@ -38,7 +38,7 @@ export default function Home() {
 
   const signOutRedirect = () => {
     const logoutUri = "https://telematicshub.vercel.app";
-    const clientId = "79ufsa7oiossab15kpcm1m628d";
+    const clientId = "79ufsa70isosab15kpcmlm628d";
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
@@ -235,7 +235,7 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
       <div className="flex justify-end mb-4">
-        <button onClick={signOutRedirect} className="bg-red-600 text-white px-4 py-2 rounded">
+        <button onClick={() => signOutRedirect()} className="bg-red-600 text-white px-4 py-2 rounded">
           Logout
         </button>
       </div>
