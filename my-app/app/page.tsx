@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "react-oidc-context";
 import React, { useState, useEffect } from "react";
 import DataChart1 from "./components/DataChart1";
 import { Line } from "react-chartjs-2";
@@ -33,6 +34,20 @@ type ParamItem = {
 type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
 
 export default function Home() {
+  const auth = useAuth();
+
+  const signOutRedirect = () => {
+    const logoutUri = "https://telematicshub.vercel.app";
+    const clientId = "79ufsa7oiossab15kpcm1m628d";
+    const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
+  };
+  
+
+  if (auth.isLoading) return <div className="p-4">Loading authentication...</div>;
+  if (auth.error) return <div className="p-4">Error: {auth.error.message}</div>;
+  if (!auth.isAuthenticated) return <button onClick={() => auth.signinRedirect()}>Sign in</button>;
+
   const [data, setData] = useState<DataItem[]>([]);
   const [filteredData, setFilteredData] = useState<DataItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -219,6 +234,12 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
+      <div className="flex justify-end mb-4">
+        <button onClick={signOutRedirect} className="bg-red-600 text-white px-4 py-2 rounded">
+          Logout
+        </button>
+      </div>
+
       <div className="max-w-[90vw] mx-auto">
         <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
           <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
