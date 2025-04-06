@@ -1,10 +1,10 @@
 "use client";
 
-import { useAuth } from "react-oidc-context";
 import React, { useState, useEffect } from "react";
+import { useAuth } from "react-oidc-context";
 import DataChart1 from "./components/DataChart1";
-import { Line } from "react-chartjs-2";
-import DatePicker from "react-datepicker";
+// import VehicleMap from "./components/VehicleMap";
+import { sampleDevices } from "./components/sampleDevices";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   Chart as ChartJS,
@@ -17,6 +17,8 @@ import {
   Legend,
   ChartData,
 } from "chart.js";
+import dynamic from "next/dynamic";
+const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false });
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -35,36 +37,16 @@ type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
 
 export default function Home() {
   const auth = useAuth();
-
-  const signOutRedirect = () => {
-    const logoutUri = "https://telematicshub.vercel.app";
-    const clientId = "79ufsa70isosab15kpcmlm628d";
-    const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
-    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
-  };
-  
-
-  if (auth.isLoading) return <div className="p-4">Loading authentication...</div>;
-  if (auth.error) return <div className="p-4">Error: {auth.error.message}</div>;
-  if (!auth.isAuthenticated) return <button onClick={() => auth.signinRedirect()}>Sign in</button>;
-
   const [data, setData] = useState<DataItem[]>([]);
   const [filteredData, setFilteredData] = useState<DataItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Chart/filter
   const [chartFields, setChartFields] = useState<string[]>(["data1"]);
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>("1m");
-  const [chartData, setChartData] = useState<ChartData<"line">>({
-    labels: [],
-    datasets: [],
-  });
-
-  // Command form
+  const [chartData, setChartData] = useState<ChartData<"line">>({ labels: [], datasets: [] });
   const [command, setCommand] = useState("");
   const [params, setParams] = useState<ParamItem[]>([]);
   const [commandLoading, setCommandLoading] = useState(false);
@@ -73,6 +55,15 @@ export default function Home() {
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
+  const signOutRedirect = () => {
+    auth.removeUser();
+    const logoutUri = "http://localhost:3000"; // or your production URL
+    const clientId = "79ufsa70isosab15kpcmlm628d";
+    const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
+  };
+
+  // Fetch API data
   useEffect(() => {
     setLoading(true);
     fetch(API_QUERY_URL)
@@ -87,7 +78,7 @@ export default function Home() {
       });
   }, []);
 
-  // Update date range based on selected timeRange if not custom.
+  // Update date range based on selected timeRange
   useEffect(() => {
     if (timeRange !== "custom") {
       const now = new Date();
@@ -114,26 +105,22 @@ export default function Home() {
     }
   }, [timeRange]);
 
-  // Filter data based on devices and date range.
+  // Filter data
   useEffect(() => {
     let filtered = data;
     if (!selectedDevices.includes("all")) {
       filtered = filtered.filter((item) => selectedDevices.includes(item.DeviceId));
     }
     if (startDate) {
-      filtered = filtered.filter(
-        (item) => new Date(Number(item.timestamp) * 1000) >= startDate!
-      );
+      filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) >= startDate!);
     }
     if (endDate) {
-      filtered = filtered.filter(
-        (item) => new Date(Number(item.timestamp) * 1000) <= endDate!
-      );
+      filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) <= endDate!);
     }
     setFilteredData(filtered);
   }, [data, selectedDevices, startDate, endDate]);
 
-  // Update chartData when filteredData or chartFields change.
+  // Update chart data
   useEffect(() => {
     if (filteredData.length === 0) {
       setChartData({ labels: [], datasets: [] });
@@ -217,7 +204,7 @@ export default function Home() {
     const headers = Object.keys(data[0]);
     const csvRows = [headers.join(",")];
     data.forEach((item) => {
-      const values = headers.map((header) => "${item[header]}");
+      const values = headers.map((header) => `${item[header]}`);
       csvRows.push(values.join(","));
     });
     const csvData = csvRows.join("\n");
@@ -235,29 +222,20 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
       <div className="flex justify-end mb-4">
-        <button onClick={() => signOutRedirect()} className="bg-red-600 text-white px-4 py-2 rounded">
+        <button onClick={signOutRedirect} className="bg-red-600 text-white px-4 py-2 rounded">
           Logout
         </button>
       </div>
-
       <div className="max-w-[90vw] mx-auto">
         <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
           <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
             EV Telematics Hub
           </span>
         </h1>
-
-
-        <div>
-            <main className="p-4">
-              <h1 className="text-3xl text-white mb-6 text-center">V1.0</h1>
-              <DataChart1 />
-            </main>
-   
-          </div>
-        
-
-        {/* Command Injection Section */}
+        <div className="p-4">
+          <h1 className="text-3xl text-white mb-6 text-center">V1.0</h1>
+          <DataChart1 />
+        </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
           <h2 className="text-2xl font-semibold mb-4">Send Command to ESP</h2>
           <form onSubmit={handleCommandSubmit}>
@@ -324,25 +302,11 @@ export default function Home() {
             {error && <p className="mt-2 text-red-600">{error}</p>}
           </form>
         </section>
-
-
-        
-        {/* <div className="w-full h-[800px] my-8 bg-transparent rounded">
-          <iframe
-            src="https://masters-sub-chart.vercel.app"
-            title="External Chart"
-            className="w-full h-full border-none rounded bg-transparent"
-          />
-        </div> */}
-
-
-
-
-
-
-
-
-
+        <section className="p-4">
+          
+          <h1 className="text-2xl mb-4">Vehicle Map</h1>
+          <VehicleMap devices={sampleDevices} />
+        </section>
       </div>
     </main>
   );
