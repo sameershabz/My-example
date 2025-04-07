@@ -57,7 +57,7 @@ export default function Home() {
 
   const signOutRedirect = () => {
     auth.removeUser();
-    const logoutUri = "http://localhost:3000"; // or your production URL
+    const logoutUri = "https://telematicshub.vercel.app"; // or your production URL
     const clientId = "79ufsa70isosab15kpcmlm628d";
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
