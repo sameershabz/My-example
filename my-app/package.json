@@ -19,7 +19,7 @@
     "react-datepicker": "^8.2.1",
     "react-dom": "^18.2.0",
     "react-financial-charts": "^2.0.1",
-    "react-leaflet": "^4.2.1",
+    "react-leaflet": "^5.0.0-rc.1",
     "recharts": "^2.1.10"
   },
   "devDependencies": {

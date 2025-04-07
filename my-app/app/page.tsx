@@ -302,11 +302,13 @@ export default function Home() {
             {error && <p className="mt-2 text-red-600">{error}</p>}
           </form>
         </section>
-        <section className="p-4">
-          
-          <h1 className="text-2xl mb-4">Vehicle Map</h1>
-          <VehicleMap devices={sampleDevices} />
-        </section>
+        {auth.isAuthenticated && (
+  <section className="p-4">
+    <h1 className="text-2xl mb-4">Vehicle Map</h1>
+    <VehicleMap devices={sampleDevices} />
+  </section>
+)}
+
       </div>
     </main>
   );

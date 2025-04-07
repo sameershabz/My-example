@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import React, { useEffect, useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -27,30 +27,45 @@ interface VehicleMapProps {
   devices: DeviceData[];
 }
 
-function MapReadyHandler({ onMap }: { onMap: (map: LeafletMap) => void }) {
-  const map = useMap();
-  React.useEffect(() => {
-    onMap(map);
-  }, [map, onMap]);
-  return null;
-}
-
 export default function VehicleMap({ devices }: VehicleMapProps) {
   const mapRef = useRef<LeafletMap | null>(null);
+  // Force a unique key if needed during hot reload
+  const [mapKey] = useState(Date.now());
 
-  const handleMapLoad = (map: LeafletMap) => {
-    mapRef.current = map;
+  // Cleanup on unmount: remove event listeners & the map
+
+  // Reset container's leaflet id on mount to avoid "already initialized" error.
+  useEffect(() => {
+    const container = document.getElementById("mapid");
+    if (container && (container as any)._leaflet_id) {
+      (container as any)._leaflet_id = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.off();
+        mapRef.current.remove();
+      }
+    };
+  }, []);
+
+  const handleMapReady = (mapEvent: any) => {
+    // mapEvent is a Leaflet Event; the actual map instance is mapEvent.target
+    mapRef.current = mapEvent.target;
   };
 
   return (
     <div style={{ width: "100%", height: "600px" }}>
-      <MapContainer
-        center={[20, 0]}
-        zoom={2}
-        scrollWheelZoom
-        style={{ width: "100%", height: "100%" }}
-      >
-        <MapReadyHandler onMap={handleMapLoad} />
+        <MapContainer
+          key={mapKey}
+          center={[20, 0]}
+          zoom={2}
+          scrollWheelZoom
+          style={{ width: "100%", height: "100%" }}
+        >
+
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -76,3 +91,4 @@ export default function VehicleMap({ devices }: VehicleMapProps) {
     </div>
   );
 }
+
