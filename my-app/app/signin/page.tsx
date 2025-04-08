@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"; // Use next/navigation instead of n
 export default function SignIn() {
   const auth = useAuth();
   const router = useRouter();
-
   useEffect(() => {
     if (auth.isAuthenticated) {
       router.replace("/"); // Redirect if already signed in

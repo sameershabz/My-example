@@ -55,29 +55,14 @@ export default function Home() {
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
-  const signOutRedirect = async () => {
-    auth.removeUser(); // ensures local state is cleared
-    const logoutUri = "https://telematicshub.vercel.app";
+  const signOutRedirect = () => {
+    
+    const logoutUri = "http://telematicshub.vercel.app"; // or prod URL
     const clientId = "79ufsa70isosab15kpcmlm628d";
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
   
-
-useEffect(() => {
-  const url = new URL(window.location.href);
-  const justLoggedOut = url.searchParams.get("loggedOut");
-
-  if (justLoggedOut) {
-    // Clear any stale auth state
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Reload app fresh
-    window.location.replace("/");
-  }
-}, []);
-
 
   // Fetch API data
   useEffect(() => {
@@ -121,8 +106,6 @@ useEffect(() => {
     }
   }, [timeRange]);
 
-
-  
   // Filter data
   useEffect(() => {
     let filtered = data;
@@ -320,13 +303,11 @@ useEffect(() => {
             {error && <p className="mt-2 text-red-600">{error}</p>}
           </form>
         </section>
-        {auth.isAuthenticated && (
-  <section className="p-4">
-    <h1 className="text-2xl mb-4">Vehicle Map</h1>
-    <VehicleMap devices={sampleDevices} />
-  </section>
-)}
-
+        <section className="p-4">
+          
+          <h1 className="text-2xl mb-4">Vehicle Map</h1>
+          <VehicleMap devices={sampleDevices} />
+        </section>
       </div>
     </main>
   );
