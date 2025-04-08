@@ -55,28 +55,13 @@ export default function Home() {
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
-const signOutRedirect = async () => {
-  await auth.removeUser(); // clear local session
-  const logoutUri = "https://telematicshub.vercel.app"; // must match Cognito config
-  const clientId = "79ufsa70isosab15kpcmlm628d";
-  const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
-  window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
-};
-
-useEffect(() => {
-  const url = new URL(window.location.href);
-  const justLoggedOut = url.searchParams.get("loggedOut");
-
-  if (justLoggedOut) {
-    // Clear any stale auth state
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Reload app fresh
-    window.location.replace("/");
-  }
-}, []);
-
+  const signOutRedirect = async () => {
+    const logoutUri = "https://telematicshub.vercel.app";
+    const clientId = "79ufsa70isosab15kpcmlm628d";
+    const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
+  };
+  
 
   // Fetch API data
   useEffect(() => {
