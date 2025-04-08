@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "react-oidc-context";
 import DataChart1 from "./components/DataChart1";
-// import VehicleMap from "./components/VehicleMap";
+import dynamic from "next/dynamic";
+const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false });
 import { sampleDevices } from "./components/sampleDevices";
 import "react-datepicker/dist/react-datepicker.css";
 import {
@@ -17,8 +18,6 @@ import {
   Legend,
   ChartData,
 } from "chart.js";
-import dynamic from "next/dynamic";
-const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false });
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -37,6 +36,7 @@ type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
 
 export default function Home() {
   const auth = useAuth();
+
   const [data, setData] = useState<DataItem[]>([]);
   const [filteredData, setFilteredData] = useState<DataItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,14 +55,14 @@ export default function Home() {
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
+  // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
-    
-    const logoutUri = "http://telematicshub.vercel.app"; // or prod URL
     const clientId = "79ufsa70isosab15kpcmlm628d";
+    const logoutUri = "http://localhost:3000/logout-callback";
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
-  
+
 
   // Fetch API data
   useEffect(() => {
@@ -234,7 +234,7 @@ export default function Home() {
           </span>
         </h1>
         <div className="p-4">
-          <h1 className="text-3xl text-white mb-6 text-center">V1.0</h1>
+          <h1 className="text-sm text-white mb-6 text-center">V1.05: Secure, injection, sourcing, mapping, graphing</h1>
           <DataChart1 />
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
@@ -284,7 +284,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleAddParam}
-                  className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs bg-blue-600 text-white rounded cursor-pointer"
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded cursor-pointer"
                 >
                   Add Parameter
                 </button>
@@ -294,7 +294,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={commandLoading}
-                className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs bg-blue-600 text-white rounded cursor-pointer"
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded cursor-pointer"
               >
                 {commandLoading ? "Sending..." : "Send Command"}
               </button>
@@ -304,7 +304,6 @@ export default function Home() {
           </form>
         </section>
         <section className="p-4">
-          
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
           <VehicleMap devices={sampleDevices} />
         </section>
