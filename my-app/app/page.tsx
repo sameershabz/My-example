@@ -106,19 +106,6 @@ const signOutRedirect = async () => {
   }, [timeRange]);
 
 
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const justLoggedOut = url.searchParams.get("loggedOut");
-  
-    if (justLoggedOut) {
-      // Clear any stale auth state
-      localStorage.clear();
-      sessionStorage.clear();
-  
-      // Reload app fresh
-      window.location.replace("/");
-    }
-  }, []);
   
   // Filter data
   useEffect(() => {
