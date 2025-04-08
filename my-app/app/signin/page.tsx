@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useAuth } from "react-oidc-context";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation"; // Use next/navigation instead of next/router
 
 export default function SignIn() {
   const auth = useAuth();
@@ -10,20 +10,11 @@ export default function SignIn() {
 
   useEffect(() => {
     if (auth.isAuthenticated) {
-      router.replace("/");
+      router.replace("/"); // Redirect if already signed in
     }
   }, [auth.isAuthenticated, router]);
 
   if (auth.isAuthenticated) return null;
-
-  const signInRedirect = () => {
-    const redirectUri = "https://telematicshub.vercel.app";
-    const clientId = "79ufsa70isosab15kpcmlm628d";
-    const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
-    window.location.href = `${cognitoDomain}/login?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&response_type=code&scope=email+openid+phone&prompt=login`;
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-gradient-x">
@@ -33,7 +24,7 @@ export default function SignIn() {
         <div className="text-red-300 text-xl">Error: {auth.error.message}</div>
       ) : (
         <button
-          onClick={signInRedirect}
+          onClick={() => auth.signinRedirect()}
           className="px-8 py-4 bg-white text-blue-600 font-bold rounded-lg shadow-md hover:bg-gray-200 transition"
         >
           Sign in

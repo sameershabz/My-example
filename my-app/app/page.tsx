@@ -57,11 +57,26 @@ export default function Home() {
 
 const signOutRedirect = async () => {
   await auth.removeUser(); // clear local session
-  const logoutUri = "http://localhost:3000"; // must match Cognito config
+  const logoutUri = "https://telematicshub.vercel.app"; // must match Cognito config
   const clientId = "79ufsa70isosab15kpcmlm628d";
   const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
   window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
 };
+
+useEffect(() => {
+  const url = new URL(window.location.href);
+  const justLoggedOut = url.searchParams.get("loggedOut");
+
+  if (justLoggedOut) {
+    // Clear any stale auth state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Reload app fresh
+    window.location.replace("/");
+  }
+}, []);
+
 
   // Fetch API data
   useEffect(() => {
