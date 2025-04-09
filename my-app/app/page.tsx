@@ -70,11 +70,11 @@ export default function Home() {
       setLoading(true);
       try {
         const token = auth.user?.id_token;
-        console.log("ID Token:", token); // Debug token output
+        console.log("Access Token:", token); // Debug token output
     
         const res = await fetch(API_QUERY_URL, {
           headers: {
-            Authorization: `Bearer ${token}`, // Send token here
+            Authorization: `Bearer ${token}`,
           },
         });    
         const json = await res.json();
@@ -192,7 +192,7 @@ export default function Home() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.access_token}`, // Add this
+        Authorization: `Bearer ${auth.user?.id_token}`, 
       },
       body: JSON.stringify(payload),
     })
