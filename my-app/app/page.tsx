@@ -70,11 +70,13 @@ export default function Home() {
       setLoading(true);
       try {
         const token = auth.user?.access_token;
+        console.log("Access Token:", token); // Debug token output
+    
         const res = await fetch(API_QUERY_URL, {
           headers: {
             Authorization: `Bearer ${token}`, // Send token here
           },
-        });
+        });    
         const json = await res.json();
         setData(json);
       } catch {
