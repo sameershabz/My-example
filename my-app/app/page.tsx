@@ -69,8 +69,8 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = auth.user?.access_token;
-        console.log("Access Token:", token); // Debug token output
+        const token = auth.user?.id_token;
+        console.log("ID Token:", token); // Debug token output
     
         const res = await fetch(API_QUERY_URL, {
           headers: {
