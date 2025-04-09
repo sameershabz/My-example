@@ -66,18 +66,27 @@ export default function Home() {
 
   // Fetch API data
   useEffect(() => {
-    setLoading(true);
-    fetch(API_QUERY_URL)
-      .then((res) => res.json())
-      .then((json: DataItem[]) => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const token = auth.user?.access_token;
+        const res = await fetch(API_QUERY_URL, {
+          headers: {
+            Authorization: `Bearer ${token}`, // Send token here
+          },
+        });
+        const json = await res.json();
         setData(json);
-        setLoading(false);
-      })
-      .catch(() => {
+      } catch {
         setError("Failed to fetch data");
+      } finally {
         setLoading(false);
-      });
-  }, []);
+      }
+    };
+  
+    if (auth.isAuthenticated) fetchData();
+  }, [auth.isAuthenticated]);
+  
 
   // Update date range based on selected timeRange
   useEffect(() => {
@@ -179,9 +188,13 @@ export default function Home() {
 
     fetch(API_COMMAND_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth.user?.access_token}`, // Add this
+      },
       body: JSON.stringify(payload),
     })
+    
       .then(async (res) => {
         const text = await res.text();
         try {
