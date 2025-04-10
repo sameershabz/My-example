@@ -81,8 +81,9 @@ export default function Home() {
         
         const res = await fetch(API_QUERY_URL, {
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json', 
+            Authorization: `Bearer ${auth.user?.access_token}`, 
+            
           },
         });
         
