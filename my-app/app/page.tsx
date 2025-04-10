@@ -69,18 +69,30 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Use access_token instead of id_token
         const token = auth.user?.access_token;
-        console.log("Access Token:", token); // Debug token output
-    
+        
+        if (!token) {
+          throw new Error("No authentication token available");
+        }
+        
+        console.log("Token type:", typeof token, "length:", token?.length); // Debug
+        
         const res = await fetch(API_QUERY_URL, {
           headers: {
-            Authorization: `Bearer ${token}`, 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         });
+        
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}: ${res.statusText}`);
+        }
+        
         const json = await res.json();
         setData(json);
-      } catch {
-        setError("Failed to fetch data");
+      } catch (err) {
+        console.error("API error:", err);
       } finally {
         setLoading(false);
       }
