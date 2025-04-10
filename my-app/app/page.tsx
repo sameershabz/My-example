@@ -69,23 +69,23 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Use access_token instead of id_token
         const token = auth.user?.access_token;
+        
         if (!token) {
           throw new Error("No authentication token available");
         }
         
-        // Simplify headers to match successful curl request
+        console.log("Token type:", typeof token, "length:", token?.length); // Debug
+        console.log("Using token:", token?.substring(0, 999) + "...");
+        
         const res = await fetch(API_QUERY_URL, {
-          method: 'GET', // Be explicit
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-            // Remove Content-Type to avoid preflight
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload),
         });
         
-
         if (!res.ok) {
           throw new Error(`API returned ${res.status}: ${res.statusText}`);
         }
