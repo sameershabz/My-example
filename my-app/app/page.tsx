@@ -52,7 +52,7 @@ export default function Home() {
   const [commandLoading, setCommandLoading] = useState(false);
   const [commandSuccess, setCommandSuccess] = useState("");
 
-  const API_QUERY_URL = "https://3skqgl3ab9.execute-api.us-east-1.amazonaws.com/main/jnkbjnk";
+  const API_QUERY_URL = "https://3skqgl3ab9.execute-api.us-east-1.amazonaws.com/main";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
   // Use the same sign-out function as in Dashboard:
