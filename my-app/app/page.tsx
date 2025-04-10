@@ -64,45 +64,6 @@ export default function Home() {
   };
 
 
-  // Fetch API data
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Use access_token instead of id_token
-        const token = auth.user?.access_token;
-        const idtoken = auth.user?.id_token;
-        
-        if (!token) {
-          throw new Error("No authentication token available");
-        }
-        
-        console.log("Using token:", token?.substring(0, 1333));
-        console.log("Using IDtoken:", idtoken?.substring(0, 1333));
-
-        const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
-          method: 'GET',
-            headers: {
-              Authorization: `Bearer ${token}`
-            
-          }
-        });
-        
-        if (!res.ok) {
-          throw new Error(`API returned ${res.status}: ${res.statusText}`);
-        }
-        
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        console.error("API error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    if (auth.isAuthenticated) fetchData();
-  }, [auth.isAuthenticated]);
   
 
   useEffect(() => {
