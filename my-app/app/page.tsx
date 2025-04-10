@@ -77,8 +77,15 @@ export default function Home() {
           throw new Error("No authentication token available");
         }
         
-        console.log("Using token:", token?.substring(0, 999) + "...");
-        console.log("Using IDtoken:", idtoken?.substring(0, 999) + "...");
+        console.log("Using token:", token?.substring(0, 1333));
+        console.log("Using IDtoken:", idtoken?.substring(0, 1333));
+
+        const res1 = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         
         const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
           method: 'GET',
