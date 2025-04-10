@@ -69,20 +69,17 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Use access_token instead of id_token
-        const token = auth.user?.id_token;
-        
+        const token = auth.user?.access_token;
         if (!token) {
           throw new Error("No authentication token available");
         }
         
-        console.log("Token type:", typeof token, "length:", token?.length); // Debug
-        console.log("Using token:", token?.substring(0, 999) + "...");
-        
+        // Simplify headers to match successful curl request
         const res = await fetch(API_QUERY_URL, {
+          method: 'GET', // Be explicit
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`
+            // Remove Content-Type to avoid preflight
           },
         });
         
@@ -94,6 +91,7 @@ export default function Home() {
         setData(json);
       } catch (err) {
         console.error("API error:", err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -205,7 +203,7 @@ export default function Home() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.id_token}`, 
+        Authorization: `Bearer ${auth.user?.access_token}`, 
       },
       body: JSON.stringify(payload),
     })
