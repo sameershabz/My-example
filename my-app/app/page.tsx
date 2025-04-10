@@ -80,10 +80,10 @@ export default function Home() {
         console.log("Using token:", token?.substring(0, 999) + "...");
         
         const res = await fetch(API_QUERY_URL, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json', 
-            Authorization: `Bearer ${auth.user?.access_token}`, 
-            
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json" // Add this back
           },
         });
         
