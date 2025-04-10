@@ -79,11 +79,13 @@ export default function Home() {
         console.log("Token type:", typeof token, "length:", token?.length); // Debug
         console.log("Using token:", token?.substring(0, 999) + "...");
         
-        const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
+        const res = await fetch(API_QUERY_URL, {
           method: 'GET',
           headers: {
+            "Content-Type": "application/json", 
             Authorization: `Bearer ${token}`
-          },
+            
+          }
         });
         
         if (!res.ok) {
