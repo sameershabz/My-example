@@ -69,14 +69,14 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = auth.user?.id_token;
-        console.log("ID Token:", token); // Debug token output
+        const token = auth.user?.access_token;
+        console.log("Access Token:", token); // Debug token output
     
         const res = await fetch(API_QUERY_URL, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, 
           },
-        });    
+        });
         const json = await res.json();
         setData(json);
       } catch {
@@ -192,7 +192,7 @@ export default function Home() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.id_token}`, 
+        Authorization: `Bearer ${auth.user?.access_token}`, 
       },
       body: JSON.stringify(payload),
     })
