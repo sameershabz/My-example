@@ -70,7 +70,7 @@ export default function Home() {
       setLoading(true);
       try {
         const token = auth.user?.id_token;
-        console.log("Access Token:", token); // Debug token output
+        console.log("ID Token:", token); // Debug token output
     
         const res = await fetch(API_QUERY_URL, {
           headers: {
