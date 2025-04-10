@@ -80,8 +80,11 @@ export default function Home() {
         console.log("Using token:", token?.substring(0, 999) + "...");
         console.log("Using IDtoken:", idtoken?.substring(0, 999) + "...");
         
-        const res = await fetch("https://3skqgl3ab9.execute-api.us-east-1.amazonaws.com/main", {
-          method: "GET"
+        const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com", {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         });
         
         if (!res.ok) {
