@@ -70,7 +70,7 @@ export default function Home() {
       setLoading(true);
       try {
         // Use access_token instead of id_token
-        const token = auth.user?.id_token;
+        const token = auth.user?.access_token;
         const idtoken = auth.user?.id_token;
         
         if (!token) {
@@ -108,7 +108,7 @@ export default function Home() {
     const fetchMainData = async () => {
       try {
         // Retrieve the access token
-        const token = auth.user?.id_token;
+        const token = auth.user?.access_token;
         if (!token) {
           throw new Error("No authentication token available");
         }
