@@ -77,7 +77,7 @@ export default function Home() {
         }
         
         console.log("Token type:", typeof token, "length:", token?.length); // Debug
-        console.log("Using token:", token?.substring(0, 950) + "...");
+        console.log("Using token:", token?.substring(0, 999) + "...");
         
         const res = await fetch(API_QUERY_URL, {
           headers: {
