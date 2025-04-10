@@ -83,9 +83,10 @@ export default function Home() {
         fetch(API_QUERY_URL, {
           method: 'GET',
           headers: {
+            "Content-Type": "application/json", 
             Authorization: `Bearer ${auth.user?.access_token}`
-            
-          }
+          },
+          
         });
         
 
