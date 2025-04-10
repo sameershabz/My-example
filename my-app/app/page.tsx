@@ -83,7 +83,8 @@ export default function Home() {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`
-          }
+          }, 
+          body: ""
         });
         
         if (!res.ok) {
