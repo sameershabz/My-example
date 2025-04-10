@@ -104,6 +104,42 @@ export default function Home() {
   }, [auth.isAuthenticated]);
   
 
+  useEffect(() => {
+    const fetchMainData = async () => {
+      try {
+        // Retrieve the access token
+        const token = auth.user?.access_token;
+        if (!token) {
+          throw new Error("No authentication token available");
+        }
+  
+        console.log("Using token:", token?.substring(0, 1333));
+  
+        // Make the GET request to the /main endpoint
+        const res = await fetch("https://3skqgl3ab9.execute-api.us-east-1.amazonaws.com/main", {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+  
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}: ${res.statusText}`);
+        }
+  
+        const json = await res.json();
+        console.log("Response from /main:", json);
+      } catch (err) {
+        console.error("Error fetching /main:", err);
+      }
+    };
+  
+    if (auth.isAuthenticated) {
+      fetchMainData();
+    }
+  }, [auth.isAuthenticated]);
+  
+
   // Update date range based on selected timeRange
   useEffect(() => {
     if (timeRange !== "custom") {
