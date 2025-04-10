@@ -83,7 +83,7 @@ export default function Home() {
         const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `${token}`
           }
         });
         
