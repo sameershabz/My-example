@@ -78,11 +78,14 @@ export default function Home() {
         const res = await fetch(API_QUERY_URL, {
           method: 'GET', // Be explicit
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
             // Remove Content-Type to avoid preflight
           },
+          body: JSON.stringify(payload),
         });
         
+
         if (!res.ok) {
           throw new Error(`API returned ${res.status}: ${res.statusText}`);
         }
