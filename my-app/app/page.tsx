@@ -71,13 +71,14 @@ export default function Home() {
       try {
         // Use access_token instead of id_token
         const token = auth.user?.access_token;
+        const idtoken = auth.user?.id_token;
         
         if (!token) {
           throw new Error("No authentication token available");
         }
         
-        console.log("Token type:", typeof token, "length:", token?.length); // Debug
         console.log("Using token:", token?.substring(0, 999) + "...");
+        console.log("Using IDtoken:", idtoken?.substring(0, 999) + "...");
         
         const res = await fetch(API_QUERY_URL, {
           method: 'GET',
@@ -201,6 +202,13 @@ export default function Home() {
       command,
       params: paramsObj,
     };
+    const atoken = auth.user?.access_token;
+    const aidtoken = auth.user?.id_token;
+    
+    
+    console.log("Using acctoken:", atoken?.substring(0, 999) + "...");
+    console.log("Using aIDtoken:", aidtoken?.substring(0, 999) + "...");
+    
 
     fetch(API_COMMAND_URL, {
       method: "POST",
