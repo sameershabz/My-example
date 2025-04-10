@@ -91,7 +91,6 @@ export default function Home() {
         setData(json);
       } catch (err) {
         console.error("API error:", err);
-        setError(err.message);
       } finally {
         setLoading(false);
       }
