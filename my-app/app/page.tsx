@@ -70,7 +70,7 @@ export default function Home() {
       setLoading(true);
       try {
         // Use access_token instead of id_token
-        const token = auth.user?.access_token;
+        const token = auth.user?.id_token;
         
         if (!token) {
           throw new Error("No authentication token available");
@@ -205,7 +205,7 @@ export default function Home() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.access_token}`, 
+        Authorization: `Bearer ${auth.user?.id_token}`, 
       },
       body: JSON.stringify(payload),
     })
