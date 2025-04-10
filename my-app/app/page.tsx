@@ -79,18 +79,19 @@ export default function Home() {
         console.log("Token type:", typeof token, "length:", token?.length); // Debug
         console.log("Using token:", token?.substring(0, 999) + "...");
         
-        
-        fetch(API_QUERY_URL, {
+        const res = await fetch(API_QUERY_URL, {
           method: 'GET',
           headers: {
-            "Content-Type": "application/json", 
-            Authorization: `Bearer ${auth.user?.access_token}`
-          },
-          
+            Authorization: `Bearer ${token}`
+          }
         });
         
-
-
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}: ${res.statusText}`);
+        }
+        
+        const json = await res.json();
+        setData(json);
       } catch (err) {
         console.error("API error:", err);
       } finally {
