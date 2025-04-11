@@ -55,7 +55,6 @@ export default function Home() {
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
-  // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
     const clientId = "79ufsa70isosab15kpcmlm628d";
     const logoutUri = "https://telematicshub.vercel.app/logout-callback";
@@ -63,73 +62,40 @@ export default function Home() {
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
 
-
-  
-
+  // Existing data fetching for QueryAPI (if needed)
   useEffect(() => {
-    const fetchMainData = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        // Retrieve the access token
         const token = auth.user?.access_token;
         if (!token) {
           throw new Error("No authentication token available");
         }
-  
         console.log("Using token:", token?.substring(0, 1333));
-  
-        // Make the GET request to the /main endpoint
-        const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
+        const res = await fetch(API_QUERY_URL, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-  
         if (!res.ok) {
           throw new Error(`API returned ${res.status}: ${res.statusText}`);
         }
-  
         const json = await res.json();
-        console.log("Response from /main:", json);
+        setData(json);
       } catch (err) {
-        console.error("Error fetching /main:", err);
+        console.error("API error:", err);
+      } finally {
+        setLoading(false);
       }
     };
   
     if (auth.isAuthenticated) {
-      fetchMainData();
+      fetchData();
     }
   }, [auth.isAuthenticated]);
-  
 
-  // Update date range based on selected timeRange
-  useEffect(() => {
-    if (timeRange !== "custom") {
-      const now = new Date();
-      let newStart: Date | null = null;
-      switch (timeRange) {
-        case "24hr":
-          newStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
-        case "7d":
-          newStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case "1m":
-          newStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          break;
-        case "1y":
-          newStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-          break;
-        case "all":
-        default:
-          newStart = null;
-      }
-      setStartDate(newStart);
-      setEndDate(now);
-    }
-  }, [timeRange]);
-
-  // Filter data
+  // Filtering data (unchanged)
   useEffect(() => {
     let filtered = data;
     if (!selectedDevices.includes("all")) {
@@ -144,8 +110,9 @@ export default function Home() {
     setFilteredData(filtered);
   }, [data, selectedDevices, startDate, endDate]);
 
-  // Update chart data
-  useEffect(() => {
+  // Remove automatic chart update useEffect
+  // Instead, create a function to update chart data manually:
+  const handleLoadChart = () => {
     if (filteredData.length === 0) {
       setChartData({ labels: [], datasets: [] });
       return;
@@ -162,36 +129,12 @@ export default function Home() {
       tension: 0.1,
     }));
     setChartData({ labels, datasets });
-  }, [filteredData, chartFields]);
+    console.log("Chart data loaded:", { labels, datasets });
+  };
 
   const uniqueDevices = ["all", ...new Set(data.map((item) => item.DeviceId))];
 
-
-  const handleFetchData = async () => {
-    console.log("Button clicked");
-
-    try {
-      const token = auth.user?.access_token;
-      if (!token) {
-        throw new Error("No authentication token available");
-      }
-      console.log("Using token:", token?.substring(0, 1333));
-      const res = await fetch(API_QUERY_URL, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (!res.ok) {
-        throw new Error(`API returned ${res.status}: ${res.statusText}`);
-      }
-      const json = await res.json();
-      console.log("Response from API:", json);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    }
-  };
-  
+  // Command submission and other functions remain unchanged...
   const handleAddParam = () => {
     if (params.length < 10) {
       setParams([...params, { key: "", value: "" }]);
@@ -225,23 +168,15 @@ export default function Home() {
       command,
       params: paramsObj,
     };
-    const atoken = auth.user?.access_token;
-    const aidtoken = auth.user?.id_token;
-    
-    
-    console.log("Using acctoken:", atoken?.substring(0, 999) + "...");
-    console.log("Using aIDtoken:", aidtoken?.substring(0, 999) + "...");
-    
-
+    console.log("Sending command with payload:", payload);
     fetch(API_COMMAND_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.id_token}`, 
+        Authorization: `Bearer ${auth.user?.id_token}`,
       },
       body: JSON.stringify(payload),
     })
-    
       .then(async (res) => {
         const text = await res.text();
         try {
@@ -279,7 +214,6 @@ export default function Home() {
     a.click();
     document.body.removeChild(a);
   };
-
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
       <div className="flex justify-end mb-4">
@@ -370,12 +304,12 @@ export default function Home() {
         
         <section className="p-4">
           <button 
-            onClick={handleFetchData} 
-            className="px-4 py-2 bg-green-600 text-white rounded"
+            onClick={handleLoadChart}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
           >
-            Fetch Data and Log
+            Load Chart Data
           </button>
-        </section>
+          </section>
       </div>
     </main>
   );
