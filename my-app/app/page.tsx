@@ -168,13 +168,15 @@ export default function Home() {
 
 
   const handleFetchData = async () => {
+    console.log("Button clicked");
+
     try {
       const token = auth.user?.access_token;
       if (!token) {
         throw new Error("No authentication token available");
       }
       console.log("Using token:", token?.substring(0, 1333));
-      const res = await fetch(API_QUERY_URL, {
+      const res = await fetch(API_QUERY_URL + "/hello", {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`
@@ -365,14 +367,15 @@ export default function Home() {
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
           <VehicleMap devices={sampleDevices} />
         </section>
+        
         <section className="p-4">
           <button 
             onClick={handleFetchData} 
             className="px-4 py-2 bg-green-600 text-white rounded"
           >
             Fetch Data and Log
-            </button>
-            </section>
+          </button>
+        </section>
       </div>
     </main>
   );
