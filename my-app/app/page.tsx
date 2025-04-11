@@ -99,7 +99,7 @@ export default function Home() {
     if (auth.isAuthenticated) {
       fetchMainData();
     }
-  }, );
+  }, [auth.isAuthenticated]);
   
 
   // Update date range based on selected timeRange
@@ -166,6 +166,30 @@ export default function Home() {
 
   const uniqueDevices = ["all", ...new Set(data.map((item) => item.DeviceId))];
 
+
+  const handleFetchData = async () => {
+    try {
+      const token = auth.user?.access_token;
+      if (!token) {
+        throw new Error("No authentication token available");
+      }
+      console.log("Using token:", token?.substring(0, 1333));
+      const res = await fetch(API_QUERY_URL, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error(`API returned ${res.status}: ${res.statusText}`);
+      }
+      const json = await res.json();
+      console.log("Response from API:", json);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
+  };
+  
   const handleAddParam = () => {
     if (params.length < 10) {
       setParams([...params, { key: "", value: "" }]);
@@ -341,6 +365,14 @@ export default function Home() {
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
           <VehicleMap devices={sampleDevices} />
         </section>
+        <section className="p-4">
+          <button 
+            onClick={handleFetchData} 
+            className="px-4 py-2 bg-green-600 text-white rounded"
+          >
+            Fetch Data and Log
+            </button>
+            </section>
       </div>
     </main>
   );
