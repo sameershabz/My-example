@@ -21,6 +21,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
+
 type DataItem = {
   DeviceId: string;
   timestamp: string;
@@ -295,7 +296,10 @@ export default function Home() {
         </h1>
         <div className="p-4">
           <h1 className="text-sm text-white mb-6 text-center">V1.05: Secure, injection, sourcing, mapping, graphing</h1>
-          <DataChart1 />
+        </div>
+
+        <div className="p-4">
+          <DataChart1 token={auth.user?.access_token as string} />
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
           <h2 className="text-2xl font-semibold mb-4">Send Command to ESP</h2>
