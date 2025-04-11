@@ -171,30 +171,7 @@ export default function Home() {
   const uniqueDevices = ["all", ...new Set(data.map((item) => item.DeviceId))];
 
 
-  const handleFetchData = async () => {
-    console.log("Button clicked");
-
-    try {
-      const token = auth.user?.access_token;
-      if (!token) {
-        throw new Error("No authentication token available");
-      }
-      console.log("Using token:", token?.substring(0, 1333));
-      const res = await fetch(API_QUERY_URL, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (!res.ok) {
-        throw new Error(`API returned ${res.status}: ${res.statusText}`);
-      }
-      const json = await res.json();
-      console.log("Response from API:", json);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    }
-  };
+  
   
   const handleAddParam = () => {
     if (params.length < 10) {
@@ -377,14 +354,7 @@ export default function Home() {
           <VehicleMap devices={sampleDevices} />
         </section>
         
-        <section className="p-4">
-          <button 
-            onClick={handleFetchData} 
-            className="px-4 py-2 bg-green-600 text-white rounded"
-          >
-            Fetch Data and Log
-          </button>
-        </section>
+        
       </div>
     </main>
   );

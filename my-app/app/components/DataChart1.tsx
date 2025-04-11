@@ -70,12 +70,8 @@ function DataChart1({ data }: DataChart1Props) {
   // const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
 
   
-  
   useEffect(() => {
-    if (!data || !data.length) {
-      setLoading(false);
-      return;
-    }
+    if (!data || data.length === 0) return;
   
     const formatDate = timeFormat("%Y-%m-%d %H:%M");
     const mapped = data
@@ -96,10 +92,10 @@ function DataChart1({ data }: DataChart1Props) {
       .filter((d): d is MappedDataItem => d !== null);
   
     setMappedData(mapped);
-    setLoading(false); // ✅ important
+    setLoading(false); // ✅ only after data was mapped
   }, [data]);
   
-
+  
   // If timeRange is not custom, auto-set startDate and endDate
   useEffect(() => {
     if (timeRange !== "custom") {
@@ -149,9 +145,10 @@ function DataChart1({ data }: DataChart1Props) {
   // Build a unique device list
   const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.DeviceId))];
 
-  if (loading) {
+  if (loading || !mappedData.length) {
     return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
   }
+  
   if (error) {
     return (
       <div style={{ textAlign: "center", padding: "2rem", color: "red" }}>
