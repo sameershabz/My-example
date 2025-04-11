@@ -99,7 +99,7 @@ export default function Home() {
     if (auth.isAuthenticated) {
       fetchMainData();
     }
-  }, [auth.isAuthenticated]);
+  }, );
   
 
   // Update date range based on selected timeRange
