@@ -315,6 +315,7 @@ function DataChart1({ data }: DataChart1Props) {
         )}
       </LineChart>
     </ResponsiveContainer>
+    )}
 
                 {/* Download CSV */}
                 <div style={{ textAlign: "right", marginBottom: "2rem" }}>
