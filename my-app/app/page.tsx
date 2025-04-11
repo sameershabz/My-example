@@ -90,7 +90,7 @@ export default function Home() {
         }
   
         const json = await res.json();
-        console.log("Response from /main:", json);
+        setApiData(json); 
       } catch (err) {
         console.error("Error fetching /main:", err);
       }

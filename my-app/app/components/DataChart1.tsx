@@ -71,18 +71,19 @@ function DataChart1({ data }: DataChart1Props) {
 
   
   
-
-  // Map API data to include a "date" property and a formatted date string
   useEffect(() => {
-    if (!data.length) return;
-    const formatDate = timeFormat("%Y-%m-%d %H:%M"); // e.g., "2024-04-03 13:45"
-
+    if (!data || !data.length) {
+      setLoading(false);
+      return;
+    }
+  
+    const formatDate = timeFormat("%Y-%m-%d %H:%M");
     const mapped = data
       .map((item) => {
         const timestampNum = Number(item.timestamp) * 1000;
         const dateObj = new Date(timestampNum);
-        if (!timestampNum || isNaN(dateObj.getTime())) return null; // skip invalid items
-
+        if (!timestampNum || isNaN(dateObj.getTime())) return null;
+  
         return {
           ...item,
           date: dateObj,
@@ -92,11 +93,12 @@ function DataChart1({ data }: DataChart1Props) {
           data3: isNaN(Number(item.data3)) ? 0 : Number(item.data3)
         } as MappedDataItem;
       })
-      .filter((d): d is MappedDataItem => d !== null); 
-      // the ": d is MappedDataItem" is a TypeScript type guard
-
+      .filter((d): d is MappedDataItem => d !== null);
+  
     setMappedData(mapped);
+    setLoading(false); // ✅ important
   }, [data]);
+  
 
   // If timeRange is not custom, auto-set startDate and endDate
   useEffect(() => {
