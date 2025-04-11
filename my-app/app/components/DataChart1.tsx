@@ -32,7 +32,7 @@ interface MappedDataItem extends ApiDataItem {
 }
 
 
-interface DataChart1Props {
+interface DataChart1Props { // comment no purpose
   token: string;
 }
 
