@@ -146,9 +146,7 @@ function DataChart1({ data }: DataChart1Props) {
     return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
   }
 
-  if (!loading && filteredData.length === 0) {
-    return <div style={{ textAlign: "center", padding: "2rem" }}>No data available</div>;
-  }
+  
   
   if (error) {
     return (
@@ -287,34 +285,36 @@ function DataChart1({ data }: DataChart1Props) {
 
         {/* Chart Section */}
         <div style={{ margin: "2rem 0" }}>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={filteredData} margin={{ left: 0, right: 0, top: 20, bottom: 130 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="dateStr"
-                domain={["auto", "auto"]}
-                tickFormatter={(tick) => timeFormat("%Y-%m-%d %H:%M")(new Date(tick))}
-                angle={-90}
-                textAnchor="end"
-              />
-              <YAxis />
-              <Tooltip
-                labelFormatter={(value) => String(value)}
-                contentStyle={{ backgroundColor: "#1f2937", border: "none", borderRadius: "0.5rem", color: "white" }} // Tooltip background
-                itemStyle={{ color: "white" }} // Text color of items
-                />
-
-              {chartFields.includes("data1") && (
-                <Line type="monotone" dataKey="data1" stroke="#2563eb" dot={false} />
-              )}
-              {chartFields.includes("data2") && (
-                <Line type="monotone" dataKey="data2" stroke="#10b981" dot={false} />
-              )}
-              {chartFields.includes("data3") && (
-                <Line type="monotone" dataKey="data3" stroke="#f59e0b" dot={false} />
-              )}
-            </LineChart>
-            </ResponsiveContainer>
+        {filteredData.length === 0 ? (
+    <div style={{ textAlign: "center", padding: "2rem" }}>No data available</div>
+  ) : (
+    <ResponsiveContainer width="100%" height={400}>
+      <LineChart data={filteredData} margin={{ left: 0, right: 0, top: 20, bottom: 130 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis
+          dataKey="dateStr"
+          domain={["auto", "auto"]}
+          tickFormatter={(tick) => timeFormat("%Y-%m-%d %H:%M")(new Date(tick))}
+          angle={-90}
+          textAnchor="end"
+        />
+        <YAxis />
+        <Tooltip
+          labelFormatter={(value) => String(value)}
+          contentStyle={{ backgroundColor: "#1f2937", border: "none", borderRadius: "0.5rem", color: "white" }}
+          itemStyle={{ color: "white" }}
+        />
+        {chartFields.includes("data1") && (
+          <Line type="monotone" dataKey="data1" stroke="#2563eb" dot={false} />
+        )}
+        {chartFields.includes("data2") && (
+          <Line type="monotone" dataKey="data2" stroke="#10b981" dot={false} />
+        )}
+        {chartFields.includes("data3") && (
+          <Line type="monotone" dataKey="data3" stroke="#f59e0b" dot={false} />
+        )}
+      </LineChart>
+    </ResponsiveContainer>
 
                 {/* Download CSV */}
                 <div style={{ textAlign: "right", marginBottom: "2rem" }}>
