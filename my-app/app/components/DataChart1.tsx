@@ -65,7 +65,16 @@ function DataChart1() {
 
   // Fetch API data on mount
   useEffect(() => {
-    fetch(API_QUERY_URL)
+    const token = "<YOUR_HARDCODED_TOKEN>"; // Replace with your token
+    const url = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
+  
+    fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((json: ApiDataItem[]) => {
         setData(json);
@@ -77,6 +86,7 @@ function DataChart1() {
         setLoading(false);
       });
   }, []);
+  
 
   // Map API data to include a "date" property and a formatted date string
   useEffect(() => {

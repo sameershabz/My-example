@@ -52,10 +52,10 @@ export default function Home() {
   const [commandLoading, setCommandLoading] = useState(false);
   const [commandSuccess, setCommandSuccess] = useState("");
 
-  // Endpoints
-  const API_QUERY_URL = "https://3skqgl3ab9.execute-api.us-east-1.amazonaws.com/main";
+  const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
 
+  // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
     const clientId = "79ufsa70isosab15kpcmlm628d";
     const logoutUri = "https://telematicshub.vercel.app/logout-callback";
@@ -63,39 +63,73 @@ export default function Home() {
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
 
-  // Existing fetchData useEffect for QueryAPI (if needed)
+
+  
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchMainData = async () => {
       try {
+        // Retrieve the access token
         const token = auth.user?.access_token;
         if (!token) {
           throw new Error("No authentication token available");
         }
+  
         console.log("Using token:", token?.substring(0, 1333));
-        const res = await fetch(API_QUERY_URL + "/QueryAPI", { // adjust path if necessary
+  
+        // Make the GET request to the /main endpoint
+        const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
+  
         if (!res.ok) {
           throw new Error(`API returned ${res.status}: ${res.statusText}`);
         }
+  
         const json = await res.json();
-        setData(json);
+        console.log("Response from /main:", json);
       } catch (err) {
-        console.error("API error:", err);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching /main:", err);
       }
     };
+  
     if (auth.isAuthenticated) {
-      fetchData();
+      fetchMainData();
     }
   }, [auth.isAuthenticated]);
+  
 
-  // Filtering existing data (unchanged)
+  // Update date range based on selected timeRange
+  useEffect(() => {
+    if (timeRange !== "custom") {
+      const now = new Date();
+      let newStart: Date | null = null;
+      switch (timeRange) {
+        case "24hr":
+          newStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case "7d":
+          newStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "1m":
+          newStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          break;
+        case "1y":
+          newStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+          break;
+        case "all":
+        default:
+          newStart = null;
+      }
+      setStartDate(newStart);
+      setEndDate(now);
+    }
+  }, [timeRange]);
+
+  // Filter data
   useEffect(() => {
     let filtered = data;
     if (!selectedDevices.includes("all")) {
@@ -110,13 +144,38 @@ export default function Home() {
     setFilteredData(filtered);
   }, [data, selectedDevices, startDate, endDate]);
 
-  // New function: Load chart data on demand
-  const handleLoadChart = async () => {
+  // Update chart data
+  useEffect(() => {
+    if (filteredData.length === 0) {
+      setChartData({ labels: [], datasets: [] });
+      return;
+    }
+    const sorted = [...filteredData].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+    const labels = sorted.map((item) =>
+      new Date(Number(item.timestamp) * 1000).toLocaleString()
+    );
+    const datasets = chartFields.map((field) => ({
+      label: `${field} over time`,
+      data: sorted.map((item) => Number(item[field]) || 0),
+      fill: false,
+      borderColor: "rgb(75, 192, 192)",
+      tension: 0.1,
+    }));
+    setChartData({ labels, datasets });
+  }, [filteredData, chartFields]);
+
+  const uniqueDevices = ["all", ...new Set(data.map((item) => item.DeviceId))];
+
+
+  const handleFetchData = async () => {
+    console.log("Button clicked");
+
     try {
       const token = auth.user?.access_token;
-      if (!token) throw new Error("No authentication token available");
-      console.log("Using token for chart:", token?.substring(0, 1333));
-      // Fetch fresh data for chart
+      if (!token) {
+        throw new Error("No authentication token available");
+      }
+      console.log("Using token:", token?.substring(0, 1333));
       const res = await fetch(API_QUERY_URL, {
         method: 'GET',
         headers: {
@@ -127,39 +186,12 @@ export default function Home() {
         throw new Error(`API returned ${res.status}: ${res.statusText}`);
       }
       const json = await res.json();
-      // Update data and filteredData with fetched json
-      setData(json);
-      let filtered = json;
-      if (!selectedDevices.includes("all")) {
-        filtered = filtered.filter((item) => selectedDevices.includes(item.DeviceId));
-      }
-      if (startDate) {
-        filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) >= startDate!);
-      }
-      if (endDate) {
-        filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) <= endDate!);
-      }
-      setFilteredData(filtered);
-      // Prepare chart data from filtered array
-      const sorted = [...filtered].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
-      const labels = sorted.map((item) => new Date(Number(item.timestamp) * 1000).toLocaleString());
-      const datasets = chartFields.map((field) => ({
-        label: `${field} over time`,
-        data: sorted.map((item) => Number(item[field]) || 0),
-        fill: false,
-        borderColor: "rgb(75, 192, 192)",
-        tension: 0.1,
-      }));
-      setChartData({ labels, datasets });
-      console.log("Chart data loaded:", { labels, datasets });
+      console.log("Response from API:", json);
     } catch (err) {
-      console.error("Error loading chart data:", err);
+      console.error("Error fetching data:", err);
     }
   };
-
-  const uniqueDevices = ["all", ...new Set(data.map((item) => item.DeviceId))];
-
-  // Command submission and other functions (unchanged)
+  
   const handleAddParam = () => {
     if (params.length < 10) {
       setParams([...params, { key: "", value: "" }]);
@@ -193,15 +225,23 @@ export default function Home() {
       command,
       params: paramsObj,
     };
-    console.log("Sending command with payload:", payload);
+    const atoken = auth.user?.access_token;
+    const aidtoken = auth.user?.id_token;
+    
+    
+    console.log("Using acctoken:", atoken?.substring(0, 999) + "...");
+    console.log("Using aIDtoken:", aidtoken?.substring(0, 999) + "...");
+    
+
     fetch(API_COMMAND_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.id_token}`
+        Authorization: `Bearer ${auth.user?.id_token}`, 
       },
       body: JSON.stringify(payload),
     })
+    
       .then(async (res) => {
         const text = await res.text();
         try {
@@ -254,15 +294,12 @@ export default function Home() {
           </span>
         </h1>
         <div className="p-4">
-          <h1 className="text-sm text-white mb-6 text-center">
-            V1.05: Secure, injection, sourcing, mapping, graphing
-          </h1>
-          <DataChart1 chartData={chartData} />
+          <h1 className="text-sm text-white mb-6 text-center">V1.05: Secure, injection, sourcing, mapping, graphing</h1>
+          <DataChart1 />
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
           <h2 className="text-2xl font-semibold mb-4">Send Command to ESP</h2>
           <form onSubmit={handleCommandSubmit}>
-            {/* Command form */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Command</label>
               <input
@@ -330,17 +367,15 @@ export default function Home() {
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
           <VehicleMap devices={sampleDevices} />
         </section>
-        {/* New button to load chart data */}
+        
         <section className="p-4">
           <button 
-            onClick={handleLoadChart}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            onClick={handleFetchData} 
+            className="px-4 py-2 bg-green-600 text-white rounded"
           >
-            Load Chart Data
+            Fetch Data and Log
           </button>
         </section>
-        {/* Optional: A button to manually fetch data (separate from chart) */}
-
       </div>
     </main>
   );
