@@ -65,10 +65,7 @@ function DataChart1({ data }: DataChart1Props) {
   const [timeRange, setTimeRange] = useState<TimeRange>("1m");
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-
-  // API endpoint
-  // const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
-
+  
   
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -147,6 +144,10 @@ function DataChart1({ data }: DataChart1Props) {
 
   if (loading || !mappedData.length) {
     return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
+  }
+
+  if (!loading && filteredData.length === 0) {
+    return <div style={{ textAlign: "center", padding: "2rem" }}>No data available</div>;
   }
   
   if (error) {
