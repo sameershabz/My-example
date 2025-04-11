@@ -32,10 +32,10 @@ interface MappedDataItem extends ApiDataItem {
 }
 
 
-interface DataChart1Props { // comment no purpose 2
-  token: string;
-}
 
+interface DataChart1Props {
+  data: ApiDataItem[];
+}
 
 // 3. Type for timeRange
 type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
@@ -49,16 +49,15 @@ const timeRanges: { label: string; value: TimeRange }[] = [
     { label: "Custom", value: "custom" }
   ];
 // 4. Define your component
-function DataChart1({ token }: DataChart1Props) {
-
-  // Raw API data
-  const [data, setData] = useState<ApiDataItem[]>([]);
-  // Data mapped into chart format
+function DataChart1({ data }: DataChart1Props) {
   const [mappedData, setMappedData] = useState<MappedDataItem[]>([]);
-  // Filtered data after applying UI controls
   const [filteredData, setFilteredData] = useState<MappedDataItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+
+  // Raw API data
+  // const [data, setData] = useState<ApiDataItem[]>([]);
+  // Data mapped into chart format
 
   // UI controls
   const [chartFields, setChartFields] = useState<string[]>(["data1"]);
@@ -68,29 +67,9 @@ function DataChart1({ token }: DataChart1Props) {
   const [endDate, setEndDate] = useState<Date | null>(null);
 
   // API endpoint
-  const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
+  // const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
 
-  // Fetch API data on mount
-  useEffect(() => {
-    const url = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
-    fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      }
-    })
-    .then((res) => res.json())
-    .then((json: ApiDataItem[]) => {
-      setData(json);
-      setLoading(false);
-    })
-    .catch((err) => {
-      console.error("Error fetching API data:", err);
-      setError("Failed to fetch data");
-      setLoading(false);
-    });
-  }, [token]);
+  
   
 
   // Map API data to include a "date" property and a formatted date string

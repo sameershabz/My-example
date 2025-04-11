@@ -52,6 +52,8 @@ export default function Home() {
   const [params, setParams] = useState<ParamItem[]>([]);
   const [commandLoading, setCommandLoading] = useState(false);
   const [commandSuccess, setCommandSuccess] = useState("");
+  const [apiData, setApiData] = useState<DataItem[]>([]);
+
 
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
   const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
@@ -63,9 +65,6 @@ export default function Home() {
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
-
-
-  
 
   useEffect(() => {
     const fetchMainData = async () => {
@@ -101,6 +100,10 @@ export default function Home() {
       fetchMainData();
     }
   }, [auth.isAuthenticated]);
+  
+
+
+
   
 
   // Update date range based on selected timeRange
@@ -299,7 +302,9 @@ export default function Home() {
         </div>
 
         <div className="p-4">
-          <DataChart1 token={auth.user?.access_token as string} />
+          {/* <DataChart1 token={auth.user?.access_token as string} /> */}
+          <DataChart1 data={apiData} />
+
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
           <h2 className="text-2xl font-semibold mb-4">Send Command to ESP</h2>
