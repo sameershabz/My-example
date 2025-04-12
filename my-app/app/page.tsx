@@ -78,12 +78,12 @@ export default function Home() {
         console.log("Using token:", token?.substring(0, 1333));
   
         // Make the GET request to the /main endpoint
-        const res = await fetch("https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI", {
+        const res = await fetch(API_QUERY_URL, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`
           }
-        });
+        }); 
   
         if (!res.ok) {
           throw new Error(`API returned ${res.status}: ${res.statusText}`);

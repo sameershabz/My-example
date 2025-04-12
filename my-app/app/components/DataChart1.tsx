@@ -160,7 +160,7 @@ function DataChart1({ data }: DataChart1Props) {
     <div style={{ padding: "0rem", boxSizing: "border-box" }}>
       <div style={{ maxWidth: "90rem", margin: "0 auto" }}>
       <h2 style={{ textAlign: "center", color: "white", fontSize: "2rem" }}>
-        View Data Stream
+      Telemetry Time Series
         </h2>
         {/* Controls Section */}
         <div style={{ margin: "1rem 0" }}>
