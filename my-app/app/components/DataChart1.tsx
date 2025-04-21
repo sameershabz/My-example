@@ -312,7 +312,7 @@ function DataChart1({ data }: DataChart1Props) {
 
           {/* Chart Field Selection */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-            {["data1", "data2", "data3"].map((field) => {
+            {allFields.map((field) => {
               const isSelected = chartFields.includes(field);
               return (
                 <button
@@ -359,15 +359,9 @@ function DataChart1({ data }: DataChart1Props) {
           contentStyle={{ backgroundColor: "#1f2937", border: "none", borderRadius: "0.5rem", color: "white" }}
           itemStyle={{ color: "white" }}
         />
-        {chartFields.includes("data1") && (
-          <Line type="monotone" dataKey="data1" stroke="#2563eb" dot={false} />
-        )}
-        {chartFields.includes("data2") && (
-          <Line type="monotone" dataKey="data2" stroke="#10b981" dot={false} />
-        )}
-        {chartFields.includes("data3") && (
-          <Line type="monotone" dataKey="data3" stroke="#f59e0b" dot={false} />
-        )}
+          {chartFields.map((field) => (
+            <Line key={field} type="monotone" dataKey={field} stroke="#2563eb" dot={false} />
+          ))} 
       </LineChart>
     </ResponsiveContainer>
     )}
