@@ -170,56 +170,8 @@ function DataChart1({ data }: DataChart1Props) {
       <h2 style={{ textAlign: "center", color: "white", fontSize: "2rem" }}>
       Telemetry Time Series
         </h2>
-          {/* Device Filter */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-            {uniqueDevices.map((device) => {
-              const isSelected = selectedDevices.includes(device);
-              return (
-                <button
-                  key={device}
-                  onClick={() => {
-                    if (device === "all") {
-                      setSelectedDevices(["all"]);
-                    } else {
-                      const newDevices = isSelected
-                        ? selectedDevices.filter((d) => d !== device)
-                        : [...selectedDevices.filter((d) => d !== "all"), device];
-                      setSelectedDevices(newDevices.length === 0 ? ["all"] : newDevices);
-                    }
-                  }}
-                  className={`px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs rounded border-none ${
-                    isSelected ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
-                  }`}
-                >
-                  {device}
-                </button>
-              );
-            })}
-          </div>
+        {/* Controls Section */}
 
-          {/* Chart Field Selection */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-            {allFields.map((field) => {
-              const isSelected = chartFields.includes(field);
-              return (
-                <button
-                  key={field}
-                  onClick={() => {
-                    const newFields = isSelected
-                      ? chartFields.filter((f) => f !== field)
-                      : [...chartFields, field];
-                    setChartFields(newFields);
-                  }}
-                  className={`px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs rounded border-none ${
-                    isSelected ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
-                  }`}
-                >
-                  {field}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Chart Section */}
         <div style={{ margin: "2rem 0" }}>
