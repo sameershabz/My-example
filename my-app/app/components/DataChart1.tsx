@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
+// import DatePicker from "react-datepicker";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import "react-datepicker/dist/react-datepicker.css";
 import { timeFormat } from "d3-time-format";
 import {
@@ -144,51 +146,6 @@ function DataChart1({ data }: DataChart1Props) {
     setLoading(false);
   }, [data]);
   
-  // If timeRange is not custom, auto-set startDate and endDate
-  useEffect(() => {
-    if (timeRange !== "custom") {
-      const now = new Date();
-      let newStart: Date | null = null;
-      switch (timeRange) {
-        case "24hr":
-          newStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
-        case "7d":
-          newStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case "1m":
-          newStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          break;
-        case "1y":
-          newStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-          break;
-        case "all":
-        default:
-          newStart = null;
-      }
-      setStartDate(newStart);
-      setEndDate(now);
-    }
-  }, [timeRange]);
-
-  // Filter mappedData by selected devices and date range
-  useEffect(() => {
-    if (!mappedData.length) return;
-    let filtered = mappedData;
-
-    if (!selectedDevices.includes("all")) {
-      filtered = filtered.filter((d) => selectedDevices.includes(d.deviceID));
-    }
-
-    if (startDate) {
-      filtered = filtered.filter((d) => d.date >= startDate);
-    }
-    if (endDate) {
-      filtered = filtered.filter((d) => d.date <= endDate);
-    }
-
-    setFilteredData(filtered);
-  }, [mappedData, selectedDevices, startDate, endDate]);
 
   // Build a unique device list
   const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.deviceID))];

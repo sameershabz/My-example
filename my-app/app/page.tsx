@@ -6,6 +6,7 @@ import DataChart1 from "./components/DataChart1";
 import dynamic from "next/dynamic";
 const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false });
 import { sampleDevices } from "./components/sampleDevices";
+import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import type { ApiDataItem } from "./components/DataChart1";
 import {
@@ -35,6 +36,21 @@ type ParamItem = {
 };
 
 type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
+const timeRanges: { label: string; value: TimeRange }[] = [
+  { label: "24hr",   value: "24hr" },
+  { label: "7 Day",  value: "7d"   },
+  { label: "1 Month",value: "1m"   },
+  { label: "1 Year", value: "1y"   },
+  { label: "All Time",value: "all" },
+  { label: "Custom", value: "custom"}
+];
+
+const allFields = [
+  "quality_min","quality_avg","lat","lon","alt_m","speed_kmh","heading_deg",
+  "voltage_v","min","avg","max","temperature_c","signal_strength_dbm",
+  "speed","accel_x","accel_y","accel_z","power_kw"
+];
+
 
 export default function Home() {
   const auth = useAuth();
@@ -66,6 +82,19 @@ export default function Home() {
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
+
+
+
+
+// chart buttons
+
+
+
+
+
+
+
+
 
   useEffect(() => {
     if (!auth.isAuthenticated || !startDate || !endDate) return;
@@ -283,6 +312,75 @@ export default function Home() {
 
         <div className="p-4">
           {/* <DataChart1 token={auth.user?.access_token as string} /> */}
+
+          // chart buttons
+<div className="p-4 bg-[var(--background)] shadow-md rounded mb-4">
+  {/* Time Range */}
+  <div className="flex flex-wrap gap-2 mb-4">
+    {timeRanges.map((r) => (
+      <button key={r.value}
+        onClick={() => setTimeRange(r.value)}
+        className={`px-4 py-2 rounded text-sm ${
+          timeRange === r.value ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+        }`}
+      >{r.label}</button>
+    ))}
+  </div>
+  {/* Custom Pickers */}
+  {timeRange === "custom" && (
+    <div className="flex gap-4 mb-4">
+      <DatePicker
+        selected={startDate}
+        onChange={(d) => { setStartDate(d); setTimeRange("custom"); }}
+        selectsStart startDate={startDate} endDate={endDate}
+        showTimeSelect dateFormat="Pp" placeholderText="Start Date"
+      />
+      <DatePicker
+        selected={endDate}
+        onChange={(d) => { setEndDate(d); setTimeRange("custom"); }}
+        selectsEnd startDate={startDate} endDate={endDate}
+        minDate={startDate || undefined}
+        showTimeSelect dateFormat="Pp" placeholderText="End Date"
+      />
+      <button
+        onClick={() => { setStartDate(null); setEndDate(null); setTimeRange("all"); }}
+        className="px-4 py-2 rounded bg-gray-600 text-white"
+      >Clear</button>
+    </div>
+  )}
+  {/* Device Filter */}
+  <div className="flex flex-wrap gap-2 mb-4">
+    {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
+      <button key={dev}
+        onClick={() =>
+          setSelectedDevices(dev === "all"
+            ? ["all"]
+            : [...selectedDevices.filter((x) => x !== "all"), dev]
+          )
+        }
+        className={`px-3 py-1 rounded text-sm ${
+          selectedDevices.includes(dev) ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+        }`}
+      >{dev}</button>
+    ))}
+  </div>
+  {/* Field Selector */}
+  <div className="flex flex-wrap gap-2">
+    {allFields.map((f) => (
+      <button key={f}
+        onClick={() =>
+          setChartFields((cf) =>
+            cf.includes(f) ? cf.filter((x) => x !== f) : [...cf, f]
+          )
+        }
+        className={`px-3 py-1 rounded text-sm ${
+          chartFields.includes(f) ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+        }`}
+      >{f}</button>
+    ))}
+  </div>
+</div>
+
           <DataChart1 data={apiData} />
 
         </div>
