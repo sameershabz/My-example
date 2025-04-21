@@ -193,9 +193,9 @@ function DataChart1({ data }: DataChart1Props) {
   // Build a unique device list
   const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.deviceID))];
 
-  if (loading || !mappedData.length) {
-    return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
-  }
+  // if (loading || !mappedData.length) {
+  //   return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
+  // }
 
   
   
@@ -336,8 +336,12 @@ function DataChart1({ data }: DataChart1Props) {
 
         {/* Chart Section */}
         <div style={{ margin: "2rem 0" }}>
-        {filteredData.length === 0 ? (
-    <div style={{ textAlign: "center", padding: "2rem" }}>No data available</div>
+        {loading ? (
+  <div style={{ textAlign: "center", padding: "2rem" }}>
+    Loading chart data…
+  </div>
+) : filteredData.length === 0 ? (
+  <div>No data available</div>
   ) : (
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={filteredData} margin={{ left: 0, right: 0, top: 20, bottom: 130 }}>
