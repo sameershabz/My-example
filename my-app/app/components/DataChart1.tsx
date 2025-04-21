@@ -40,8 +40,6 @@ export interface ApiDataItem {
 interface MappedDataItem extends ApiDataItem {
   date: Date;
   dateStr: string;
-  
-  // flattened numeric fields:
   quality_min: number;
   quality_avg: number;
   lat: number;
@@ -63,9 +61,9 @@ interface MappedDataItem extends ApiDataItem {
 }
 
 
-
 interface DataChart1Props {
   data: ApiDataItem[];
+  chartFields: string[];
 }
 
 // 3. Type for timeRange
@@ -80,11 +78,10 @@ const timeRanges: { label: string; value: TimeRange }[] = [
     { label: "Custom", value: "custom" }
   ];
 // 4. Define your component
-function DataChart1({ data }: DataChart1Props) {
+export default function DataChart1({ data, chartFields }: DataChart1Props) {
   const [mappedData, setMappedData] = useState<MappedDataItem[]>([]);
-  const [filteredData, setFilteredData] = useState<MappedDataItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  
 
   // Raw API data
   // const [data, setData] = useState<ApiDataItem[]>([]);
@@ -96,7 +93,7 @@ function DataChart1({ data }: DataChart1Props) {
     "voltage_v","min","avg","max","temperature_c","signal_strength_dbm",
     "speed","accel_x","accel_y","accel_z","power_kw"
   ];
-  const [chartFields, setChartFields] = useState<string[]>(allFields);
+  
   
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
   const [timeRange, setTimeRange] = useState<TimeRange>("1m");
@@ -104,18 +101,17 @@ function DataChart1({ data }: DataChart1Props) {
   const [endDate, setEndDate] = useState<Date | null>(null);
   
   
+
   useEffect(() => {
-    if (!data || data.length === 0) return;
-  
-    const formatDate = timeFormat("%Y-%m-%d %H:%M");
-    const mapped = data.map((item) => {
+    if (!data) return;
+    const fmt = timeFormat("%Y-%m-%d %H:%M");
+    const m = data.map((item) => {
       const dateObj = new Date(item.timestamp);
       return {
         ...item,
         date: dateObj,
-        dateStr: formatDate(dateObj),
-  
-        // flatten everything into top‐level keys
+        dateStr: fmt(dateObj),
+
         quality_min: item.gnss.quality_min,
         quality_avg: item.gnss.quality_avg,
         lat:           item.gnss.lat,
@@ -123,29 +119,35 @@ function DataChart1({ data }: DataChart1Props) {
         alt_m:         item.gnss.alt_m,
         speed_kmh:     item.gnss.speed_kmh,
         heading_deg:   item.gnss.heading_deg,
-  
+
         voltage_v:     item.voltage_v,
-  
+
         min:           item.current_a.min,
         avg:           item.current_a.avg,
         max:           item.current_a.max,
-  
-        temperature_c:         item.temperature_c,
-        signal_strength_dbm:   item.signal_strength_dbm,
-        speed:                 item.speed ?? 0,
-  
-        accel_x:       item.accel.x,
-        accel_y:       item.accel.y,
-        accel_z:       item.accel.z,
-  
-        power_kw:      item.power_kw
+
+        temperature_c:       item.temperature_c,
+        signal_strength_dbm: item.signal_strength_dbm,
+        speed:               item.speed ?? 0,
+
+        accel_x: item.accel.x,
+        accel_y: item.accel.y,
+        accel_z: item.accel.z,
+
+        power_kw: item.power_kw
       } as MappedDataItem;
     });
-  
-    setMappedData(mapped);
+    setMappedData(m);
     setLoading(false);
   }, [data]);
-  
+
+  if (loading) {
+    return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
+  }
+  if (!mappedData.length) {
+    return <div style={{ textAlign: "center", padding: "2rem" }}>No data available</div>;
+  }
+
 
   // Build a unique device list
   const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.deviceID))];
@@ -156,89 +158,37 @@ function DataChart1({ data }: DataChart1Props) {
 
   
   
-  if (error) {
-    return (
-      <div style={{ textAlign: "center", padding: "2rem", color: "red" }}>
-        {error}
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: "0rem", boxSizing: "border-box" }}>
-      <div style={{ maxWidth: "90rem", margin: "0 auto" }}>
-      <h2 style={{ textAlign: "center", color: "white", fontSize: "2rem" }}>
-      Telemetry Time Series
-        </h2>
-        {/* Controls Section */}
-
-
-        {/* Chart Section */}
-        <div style={{ margin: "2rem 0" }}>
-        {loading ? (
-  <div style={{ textAlign: "center", padding: "2rem" }}>
-    Loading chart data…
-  </div>
-) : filteredData.length === 0 ? (
-  <div>No data available</div>
-  ) : (
     <ResponsiveContainer width="100%" height={400}>
-      <LineChart data={filteredData} margin={{ left: 0, right: 0, top: 20, bottom: 130 }}>
+      <LineChart
+        data={mappedData}
+        margin={{ left: 0, right: 0, top: 20, bottom: 130 }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="dateStr"
-          domain={["auto", "auto"]}
-          tickFormatter={(tick) => timeFormat("%Y-%m-%d %H:%M")(new Date(tick))}
           angle={-90}
           textAnchor="end"
         />
         <YAxis />
         <Tooltip
-          labelFormatter={(value) => String(value)}
-          contentStyle={{ backgroundColor: "#1f2937", border: "none", borderRadius: "0.5rem", color: "white" }}
+          contentStyle={{
+            backgroundColor: "#1f2937",
+            border: "none",
+            borderRadius: "0.5rem",
+            color: "white"
+          }}
           itemStyle={{ color: "white" }}
         />
-          {chartFields.map((field) => (
-            <Line key={field} type="monotone" dataKey={field} stroke="#2563eb" dot={false} />
-          ))} 
+        {chartFields.map((field) => (
+          <Line
+            key={field}
+            type="monotone"
+            dataKey={field}
+            dot={false}
+          />
+        ))}
       </LineChart>
     </ResponsiveContainer>
-    )}
-
-                {/* Download CSV */}
-                <div style={{ textAlign: "right", marginBottom: "2rem" }}>
-                <button
-                    onClick={() => {
-                    if (!data.length) return;
-                    const headers = Object.keys(data[0]);
-                    const csvRows = [headers.join(",")];
-                    data.forEach((item) => {
-                        const values = headers.map((header) => (item as Record<string, any>)[header]);
-                        csvRows.push(values.join(","));
-                    });
-                    const csvData = csvRows.join("\n");
-                    const blob = new Blob([csvData], { type: "text/csv" });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.setAttribute("hidden", "");
-                    a.setAttribute("href", url);
-                    a.setAttribute("download", "esp_data.csv");
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    }}
-                    className="px-4 py-2 text-sm sm:px-3 sm:py-1 sm:text-xs bg-blue-600 text-white rounded cursor-pointer"
-
-                >
-                    Download CSV
-                </button>
-                </div>
-
-                </div>
-
-      </div>
-    </div>
   );
 }
-
-export default DataChart1;

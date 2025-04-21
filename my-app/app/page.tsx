@@ -293,6 +293,16 @@ export default function Home() {
     document.body.removeChild(a);
   };
 
+  const filteredApiData = apiData.filter((item) => {
+    const ts = new Date(item.timestamp)
+    if (startDate && ts < startDate) return false
+    if (endDate   && ts > endDate)   return false
+    if (!selectedDevices.includes("all") &&
+        !selectedDevices.includes(item.deviceID)
+    ) return false
+    return true
+  })
+
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
       <div className="flex justify-end mb-4">
@@ -381,7 +391,9 @@ export default function Home() {
   </div>
 </div>
 
-          <DataChart1 data={apiData} />
+          <DataChart1 data={apiData}
+            chartFields={chartFields}
+            />
 
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
