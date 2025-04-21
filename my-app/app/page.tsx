@@ -67,30 +67,26 @@ export default function Home() {
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
 
-  useEffect(() => {
-// fetch /QueryAPI?start=…&end=…&points=…
+useEffect(() => {
+  if (!auth.isAuthenticated || !startDate || !endDate) return;
+
   const fetchMainData = async () => {
-    const token = auth.user?.access_token;
-    if (!startDate || !endDate) return;
+    const token = auth.user!.access_token!;
     const params = new URLSearchParams({
-      start:  startDate!.toISOString(),
-      end:    endDate!.toISOString(),
+      start:  startDate.toISOString(),
+      end:    endDate.toISOString(),
       points: "2"
     });
     const res = await fetch(`${API_QUERY_URL}?${params}`, {
-      method: 'GET',
       headers: { Authorization: `Bearer ${token}` }
     });
     const json = await res.json();
     setApiData(json);
   };
 
+  fetchMainData();
+}, [auth.isAuthenticated, startDate, endDate]);
 
-  
-    if (auth.isAuthenticated) {
-      fetchMainData();
-    }
-  }, [auth.isAuthenticated]);
   
 
 
