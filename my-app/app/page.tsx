@@ -70,38 +70,39 @@ export default function Home() {
   useEffect(() => {
     if (!auth.isAuthenticated || !startDate || !endDate) return;
   
-    const fetchMainData = async () => {
-      setLoading(true);
-      const token = auth.user!.access_token!;
+    setLoading(true);
+    const token = auth.user!.access_token!;
   
-      // strip milliseconds
-      const startIso = startDate.toISOString().split('.')[0] + 'Z';
-      const endIso   = endDate  .toISOString().split('.')[0] + 'Z';
+    // strip off milliseconds:
+    const startIso = startDate.toISOString().split('.')[0] + 'Z';
+    const endIso   = endDate  .toISOString().split('.')[0] + 'Z';
   
-      const params = new URLSearchParams({
-        start:  startIso,
-        end:    endIso,
-        points: "2"
-      });
+    const params = new URLSearchParams({
+      start:  startIso,
+      end:    endIso,
+      points: "2"
+    });
   
-      const res = await fetch(`${API_QUERY_URL}?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-  
-      if (!res.ok) {
-        console.error('API error', res.status, await res.text());
-        setError(`API returned ${res.status}`);
-        setApiData([]);       // clear old data
+    fetch(`${API_QUERY_URL}?${params}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`API ${res.status}: ${await res.text()}`);
+        }
+        return res.json();
+      })
+      .then((json) => {
+        setApiData(Array.isArray(json) ? json : []);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err.message);
+        setApiData([]);
+      })
+      .finally(() => {
         setLoading(false);
-        return;
-      }
-  
-      const json = await res.json();
-      setApiData(Array.isArray(json) ? json : []);
-      setLoading(false);
-    };
-  
-    fetchMainData();
+      });
   }, [auth.isAuthenticated, startDate, endDate]);
 
 
