@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false });
 import { sampleDevices } from "./components/sampleDevices";
 import "react-datepicker/dist/react-datepicker.css";
+import type { ApiDataItem } from "./components/DataChart1";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -22,11 +23,11 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 
-type DataItem = {
-  DeviceId: string;
-  timestamp: string;
-  [key: string]: any;
-};
+// type DataItem = {
+//   DeviceId: string;
+//   timestamp: string;
+//   [key: string]: any;
+// };
 
 type ParamItem = {
   key: string;
@@ -38,8 +39,8 @@ type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
 export default function Home() {
   const auth = useAuth();
 
-  const [data, setData] = useState<DataItem[]>([]);
-  const [filteredData, setFilteredData] = useState<DataItem[]>([]);
+  const [data, setData] = useState<ApiDataItem[]>([]);
+  const [filteredData, setFilteredData] = useState<ApiDataItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [chartFields, setChartFields] = useState<string[]>(["data1"]);
@@ -52,7 +53,7 @@ export default function Home() {
   const [params, setParams] = useState<ParamItem[]>([]);
   const [commandLoading, setCommandLoading] = useState(false);
   const [commandSuccess, setCommandSuccess] = useState("");
-  const [apiData, setApiData] = useState<DataItem[]>([]);
+  const [apiData, setApiData] = useState<ApiDataItem[]>([]);
 
 
   const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
@@ -67,34 +68,23 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const fetchMainData = async () => {
-      try {
-        // Retrieve the access token
-        const token = auth.user?.access_token;
-        if (!token) {
-          throw new Error("No authentication token available");
-        }
-  
-        console.log("Using token:", token?.substring(0, 1333));
-  
-        // Make the GET request to the /main endpoint
-        const res = await fetch(API_QUERY_URL, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }); 
-  
-        if (!res.ok) {
-          throw new Error(`API returned ${res.status}: ${res.statusText}`);
-        }
-  
-        const json = await res.json();
-        setApiData(json); 
-      } catch (err) {
-        console.error("Error fetching /main:", err);
-      }
-    };
+// fetch /QueryAPI?start=…&end=…&points=…
+  const fetchMainData = async () => {
+    const token = auth.user?.access_token;
+    const params = new URLSearchParams({
+      start:  startDate!.toISOString(),
+      end:    endDate!.toISOString(),
+      points: "2"
+    });
+    const res = await fetch(`${API_QUERY_URL}?${params}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    setApiData(json);
+  };
+
+
   
     if (auth.isAuthenticated) {
       fetchMainData();
@@ -137,7 +127,7 @@ export default function Home() {
   useEffect(() => {
     let filtered = data;
     if (!selectedDevices.includes("all")) {
-      filtered = filtered.filter((item) => selectedDevices.includes(item.DeviceId));
+      filtered = filtered.filter((item) => selectedDevices.includes(item.deviceID));
     }
     if (startDate) {
       filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) >= startDate!);
@@ -168,7 +158,7 @@ export default function Home() {
     setChartData({ labels, datasets });
   }, [filteredData, chartFields]);
 
-  const uniqueDevices = ["all", ...new Set(data.map((item) => item.DeviceId))];
+  const uniqueDevices = ["all", ...new Set(data.map((item) => item.deviceID))];
 
 
   
