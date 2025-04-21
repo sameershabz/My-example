@@ -60,12 +60,11 @@ interface MappedDataItem extends ApiDataItem {
   power_kw: number;
 }
 
-
 interface DataChart1Props {
   data: ApiDataItem[];
   chartFields: string[];
+  loading: boolean;
 }
-
 // 3. Type for timeRange
 type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
 
@@ -78,9 +77,9 @@ const timeRanges: { label: string; value: TimeRange }[] = [
     { label: "Custom", value: "custom" }
   ];
 // 4. Define your component
-export default function DataChart1({ data, chartFields }: DataChart1Props) {
+export default function DataChart1({ data, chartFields, loading }: DataChart1Props) {
   const [mappedData, setMappedData] = useState<MappedDataItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   
 
   // Raw API data
@@ -95,11 +94,11 @@ export default function DataChart1({ data, chartFields }: DataChart1Props) {
   ];
   
   
+
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
   const [timeRange, setTimeRange] = useState<TimeRange>("1m");
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  
   
 
   useEffect(() => {
@@ -138,7 +137,6 @@ export default function DataChart1({ data, chartFields }: DataChart1Props) {
       } as MappedDataItem;
     });
     setMappedData(m);
-    setLoading(false);
   }, [data]);
 
   if (loading) {

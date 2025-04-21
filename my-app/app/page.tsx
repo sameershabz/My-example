@@ -391,7 +391,8 @@ export default function Home() {
   </div>
 </div>
 
-      <DataChart1 data={apiData} chartFields={chartFields} />
+        <DataChart1 data={apiData} chartFields={chartFields} loading={loading} />
+
 
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
