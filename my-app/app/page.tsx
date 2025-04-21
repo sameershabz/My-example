@@ -71,6 +71,7 @@ export default function Home() {
 // fetch /QueryAPI?start=…&end=…&points=…
   const fetchMainData = async () => {
     const token = auth.user?.access_token;
+    if (!startDate || !endDate) return;
     const params = new URLSearchParams({
       start:  startDate!.toISOString(),
       end:    endDate!.toISOString(),
