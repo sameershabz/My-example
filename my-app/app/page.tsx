@@ -67,27 +67,42 @@ export default function Home() {
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
 
-useEffect(() => {
-  if (!auth.isAuthenticated || !startDate || !endDate) return;
-
-  const fetchMainData = async () => {
-    const token = auth.user!.access_token!;
-    const params = new URLSearchParams({
-      start:  startDate.toISOString(),
-      end:    endDate.toISOString(),
-      points: "2"
-    });
-    const res = await fetch(`${API_QUERY_URL}?${params}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const json = await res.json();
-    setApiData(json);
-  };
-
-  fetchMainData();
-}, [auth.isAuthenticated, startDate, endDate]);
-
+  useEffect(() => {
+    if (!auth.isAuthenticated || !startDate || !endDate) return;
   
+    const fetchMainData = async () => {
+      setLoading(true);
+      const token = auth.user!.access_token!;
+  
+      // strip milliseconds
+      const startIso = startDate.toISOString().split('.')[0] + 'Z';
+      const endIso   = endDate  .toISOString().split('.')[0] + 'Z';
+  
+      const params = new URLSearchParams({
+        start:  startIso,
+        end:    endIso,
+        points: "2"
+      });
+  
+      const res = await fetch(`${API_QUERY_URL}?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+  
+      if (!res.ok) {
+        console.error('API error', res.status, await res.text());
+        setError(`API returned ${res.status}`);
+        setApiData([]);       // clear old data
+        setLoading(false);
+        return;
+      }
+  
+      const json = await res.json();
+      setApiData(Array.isArray(json) ? json : []);
+      setLoading(false);
+    };
+  
+    fetchMainData();
+  }, [auth.isAuthenticated, startDate, endDate]);
 
 
 
