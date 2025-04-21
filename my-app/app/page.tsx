@@ -150,7 +150,7 @@ export default function Home() {
     );
     const datasets = chartFields.map((field) => ({
       label: `${field} over time`,
-      data: sorted.map((item) => Number(item[field]) || 0),
+      data: sorted.map((item) => Number((item as Record<string, any>)[field])),
       fill: false,
       borderColor: "rgb(75, 192, 192)",
       tension: 0.1,
@@ -236,7 +236,7 @@ export default function Home() {
     const headers = Object.keys(data[0]);
     const csvRows = [headers.join(",")];
     data.forEach((item) => {
-      const values = headers.map((header) => `${item[header]}`);
+      const values = headers.map((header) => `${(item as Record<string, any>)[header]}`);
       csvRows.push(values.join(","));
     });
     const csvData = csvRows.join("\n");
