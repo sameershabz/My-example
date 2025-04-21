@@ -59,7 +59,7 @@ export default function Home() {
   const [filteredData, setFilteredData] = useState<ApiDataItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [chartFields, setChartFields] = useState<string[]>(["data1"]);
+  const [chartFields, setChartFields] = useState<string[]>(["voltage_v"]);
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -109,7 +109,7 @@ export default function Home() {
     const params = new URLSearchParams({
       start:  startIso,
       end:    endIso,
-      points: "2"
+      points: "24"
     });
   
     fetch(`${API_QUERY_URL}?${params}`, {
@@ -391,9 +391,7 @@ export default function Home() {
   </div>
 </div>
 
-          <DataChart1 data={apiData}
-            chartFields={chartFields}
-            />
+      <DataChart1 data={apiData} chartFields={chartFields} />
 
         </div>
         <section className="bg-[var(--background)] shadow-md rounded p-4">
