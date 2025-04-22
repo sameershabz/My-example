@@ -169,36 +169,45 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
         margin={{ left: 0, right: 0, top: 20, bottom: 130 }}
       >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="dateStr" angle={-90} textAnchor="end" />
+        <XAxis
+          dataKey="dateStr"
+          angle={-90}
+          textAnchor="end"
+        />
         <YAxis />
         <Tooltip
           contentStyle={{
             backgroundColor: "#1f2937",
             border: "none",
             borderRadius: "0.5rem",
-            color: "white",
+            color: "white"
           }}
           itemStyle={{ color: "white" }}
         />
-        {uniqueDevices.map((dev, di) =>
-          chartFields.map((field, fi) => {
-            const idx = di * chartFields.length + fi;
-            return (
-              <Line
-                key={`${dev}-${field}`}
-                type="monotone"
-                dataKey={(row: any) =>
-                  row.deviceID === dev ? row[field] : null
-                }
-                name={`${dev} ${field}`}
-                stroke={getColor(idx)}
-                dot={false}
-              />
-            );
-          })
-        )}
+        {chartFields.map((field) => (
+          <Line
+            key={field}
+            type="monotone"
+            dataKey={field}
+            dot={false}
+          />
+        ))}
+          {uniqueDevices.map((dev, di) =>
+            chartFields.map((field, fi) => {
+              const idx = di * chartFields.length + fi;
+              return (
+                <Line
+                  key={`${dev}-${field}`}
+                  type="monotone"
+                  dataKey={(row: any) => row.deviceID === dev ? row[field] : null}
+                  name={`${dev} ${field}`}
+                  stroke={getColor(idx)}
+                  dot={false}
+                />
+              );
+            })
+          )}
       </LineChart>
     </ResponsiveContainer>
   );
-
 }
