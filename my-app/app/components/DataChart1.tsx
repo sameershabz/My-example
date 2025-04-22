@@ -114,7 +114,12 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
           contentStyle={{ backgroundColor: "#1f2937", border: "none", borderRadius: 4 }}
           itemStyle={{ color: "#fff" }}
         />
-        <Legend onClick={handleLegendClick} />
+        <Legend
+          onClick={handleLegendClick}
+          layout="horizontal"
+          verticalAlign="top"
+          align="center"
+        />
         {seriesKeys.map((key, i) => (
           <Line
             key={key}

@@ -86,11 +86,6 @@ export default function Home() {
 
 
 
-// chart buttons
-
-
-
-
 
 
 
@@ -362,12 +357,15 @@ export default function Home() {
   <div className="flex flex-wrap gap-2 mb-4">
     {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
       <button key={dev}
-        onClick={() =>
-          setSelectedDevices(dev === "all"
-            ? ["all"]
-            : [...selectedDevices.filter((x) => x !== "all"), dev]
-          )
-        }
+      onClick={() => {
+        setSelectedDevices((prev) => {
+          if (dev === "all") return ["all"];
+          const next = prev.includes(dev)
+            ? prev.filter((d) => d !== dev)
+            : [...prev.filter((d) => d !== "all"), dev];
+          return next.length ? next : ["all"];
+        });
+      }}
         className={`px-3 py-1 rounded text-sm ${
           selectedDevices.includes(dev) ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
         }`}
