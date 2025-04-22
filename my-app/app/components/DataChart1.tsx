@@ -75,16 +75,21 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
           itemStyle={{ color:"#fff" }}
         />
         <Legend onClick={handleLegendClick} />
-        {seriesKeys.map((key, i) => (
-          <Line
-            key={key}
-            dataKey={key}
-            name={key}
-            stroke={getColor(i)}
-            dot={false}
-            hide={hidden.has(key)}
-          />
-        ))}
+
+
+
+                  {seriesKeys.map((key, i) => (
+                      <Line
+                        key={key}
+                        dataKey={key}
+                        name={key}
+                        stroke={getColor(i)}
+                        dot={{ r: 4 }}            // <-- show points with radius 4
+                        activeDot={{ r: 6 }}      // <-- larger on hover
+                        hide={hidden.has(key)}
+                      />
+                    ))}
+
       </LineChart>
     </ResponsiveContainer>
   );
