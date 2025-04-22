@@ -33,7 +33,7 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
     setHidden(s);
   };
 
-  // build sorted rows and series keys
+  // build rows and series keys
   const [rows, setRows] = useState<any[]>([]);
   const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
   useEffect(() => {
@@ -47,9 +47,9 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
       devices.forEach(dev => {
         chartFields.forEach(f => {
           const key = `${dev}-${f}`;
-          r[key] = item.deviceID === dev
-            ? (item as any)[f] ?? (item.gnss?.[f] ?? null)
-            : null;
+          // pick root or nested field
+          const val = (item as any)[f] ?? item.gnss?.[f] ?? null;
+          r[key] = item.deviceID === dev ? val : null;
         });
       });
       return r;
@@ -66,30 +66,27 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
 
   return (
     <ResponsiveContainer width="100%" height={400}>
-      <LineChart data={rows} margin={{ top:20, right:20, bottom:100, left:0 }}>
+      <LineChart data={rows} margin={{ top: 20, right: 20, bottom: 100, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="dateStr" angle={-90} textAnchor="end" />
-        <YAxis />
+        <YAxis domain={["auto", "auto"]} /> {/* auto-scale */}
         <Tooltip 
           contentStyle={{ backgroundColor:"#1f2937", border:"none", borderRadius:4 }}
           itemStyle={{ color:"#fff" }}
         />
         <Legend onClick={handleLegendClick} />
-
-
-
-                  {seriesKeys.map((key, i) => (
-                      <Line
-                        key={key}
-                        dataKey={key}
-                        name={key}
-                        stroke={getColor(i)}
-                        dot={{ r: 4 }}            // <-- show points with radius 4
-                        activeDot={{ r: 6 }}      // <-- larger on hover
-                        hide={hidden.has(key)}
-                      />
-                    ))}
-
+        {seriesKeys.map((key, i) => (
+          <Line
+            key={key}
+            dataKey={key}
+            name={key}
+            stroke={getColor(i)}
+            connectNulls={true}      // join across nulls
+            dot={{ r: 3 }}           // visible markers
+            activeDot={{ r: 6 }}
+            hide={hidden.has(key)}
+          />
+        ))}
       </LineChart>
     </ResponsiveContainer>
   );
