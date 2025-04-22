@@ -389,7 +389,7 @@ export default function Home() {
   </div>
 </div>
 
-        <DataChart1 data={apiData} chartFields={chartFields} loading={loading} />
+        <DataChart1 data={filteredApiData} chartFields={chartFields} loading={loading} />
 
 
         </div>
