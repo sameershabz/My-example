@@ -148,13 +148,19 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
 
 
   // Build a unique device list
-  const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.deviceID))];
+  // const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.deviceID))];
+  const uniqueDevices = Array.from(new Set(mappedData.map((d) => d.deviceID)));
+
 
   // if (loading || !mappedData.length) {
   //   return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
   // }
 
-  
+  const seriesCount = uniqueDevices.length * chartFields.length;
+
+  // helper to get HSL color
+  const getColor = (idx: number) =>
+    `hsl(${Math.round((idx / seriesCount) * 360)}, 70%, 50%)`;
   
   return (
     <ResponsiveContainer width="100%" height={400}>
@@ -186,6 +192,21 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
             dot={false}
           />
         ))}
+          {uniqueDevices.map((dev, di) =>
+            chartFields.map((field, fi) => {
+              const idx = di * chartFields.length + fi;
+              return (
+                <Line
+                  key={`${dev}-${field}`}
+                  type="monotone"
+                  dataKey={(row: any) => row.deviceID === dev ? row[field] : null}
+                  name={`${dev} ${field}`}
+                  stroke={getColor(idx)}
+                  dot={false}
+                />
+              );
+            })
+          )}
       </LineChart>
     </ResponsiveContainer>
   );
