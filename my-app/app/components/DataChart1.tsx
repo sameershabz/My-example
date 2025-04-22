@@ -12,8 +12,10 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  Tooltip
+  Legend,
+  Tooltip,
 } from "recharts";
+
 
 // 1. Define a type for each data item from the API
 export interface ApiDataItem {
@@ -60,12 +62,7 @@ interface MappedDataItem extends ApiDataItem {
   power_kw: number;
 }
 
-interface DataChart1Props {
-  data: ApiDataItem[];
-  chartFields: string[];
-  loading: boolean;
-}
-// 3. Type for timeRange
+interface DataChart1Props { data: ApiDataItem[]; chartFields: string[]; loading: boolean; }
 type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
 
 const timeRanges: { label: string; value: TimeRange }[] = [
@@ -77,131 +74,83 @@ const timeRanges: { label: string; value: TimeRange }[] = [
     { label: "Custom", value: "custom" }
   ];
 // 4. Define your component
+
 export default function DataChart1({ data, chartFields, loading }: DataChart1Props) {
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const handleLegendClick = (e: any) => {
+    const key = e.dataKey || e.value;
+    const s = new Set(hidden);
+    hidden.has(key) ? s.delete(key) : s.add(key);
+    setHidden(s);
+  };
+
   const [mappedData, setMappedData] = useState<MappedDataItem[]>([]);
-  // const [loading, setLoading] = useState(true);
-  
-
-  // Raw API data
-  // const [data, setData] = useState<ApiDataItem[]>([]);
-  // Data mapped into chart format
-
-  // UI controls
-  const allFields = [
-    "quality_min","quality_avg","lat","lon","alt_m","speed_kmh","heading_deg",
-    "voltage_v","min","avg","max","temperature_c","signal_strength_dbm",
-    "speed","accel_x","accel_y","accel_z","power_kw"
-  ];
-  
-  
-
-  const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
-  const [timeRange, setTimeRange] = useState<TimeRange>("1m");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  
-
   useEffect(() => {
     if (!data) return;
     const fmt = timeFormat("%Y-%m-%d %H:%M");
-    const m = data.map((item) => {
+    setMappedData(data.map(item => {
       const dateObj = new Date(item.timestamp);
       return {
         ...item,
         date: dateObj,
         dateStr: fmt(dateObj),
-
         quality_min: item.gnss.quality_min,
         quality_avg: item.gnss.quality_avg,
-        lat:           item.gnss.lat,
-        lon:           item.gnss.lon,
-        alt_m:         item.gnss.alt_m,
-        speed_kmh:     item.gnss.speed_kmh,
-        heading_deg:   item.gnss.heading_deg,
-
-        voltage_v:     item.voltage_v,
-
-        min:           item.current_a.min,
-        avg:           item.current_a.avg,
-        max:           item.current_a.max,
-
-        temperature_c:       item.temperature_c,
+        lat: item.gnss.lat,
+        lon: item.gnss.lon,
+        alt_m: item.gnss.alt_m,
+        speed_kmh: item.gnss.speed_kmh,
+        heading_deg: item.gnss.heading_deg,
+        voltage_v: item.voltage_v,
+        min: item.current_a.min,
+        avg: item.current_a.avg,
+        max: item.current_a.max,
+        temperature_c: item.temperature_c,
         signal_strength_dbm: item.signal_strength_dbm,
-        speed:               item.speed ?? 0,
-
+        speed: item.speed ?? 0,
         accel_x: item.accel.x,
         accel_y: item.accel.y,
         accel_z: item.accel.z,
-
-        power_kw: item.power_kw
+        power_kw: item.power_kw,
       } as MappedDataItem;
-    });
-    setMappedData(m);
+    }));
   }, [data]);
 
-  if (loading) {
-    return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
-  }
-  if (!mappedData.length) {
-    return <div style={{ textAlign: "center", padding: "2rem" }}>No data available</div>;
-  }
+  if (loading) return <div style={{ textAlign: "center", padding: "2rem" }}>Loading...</div>;
+  if (!mappedData.length) return <div style={{ textAlign: "center", padding: "2rem" }}>No data</div>;
 
-
-  // Build a unique device list
-  // const uniqueDevices = ["all", ...new Set(mappedData.map((d) => d.deviceID))];
-  const uniqueDevices = Array.from(new Set(mappedData.map((d) => d.deviceID)));
-
-
-  // if (loading || !mappedData.length) {
-  //   return <div style={{ textAlign: "center", padding: "2rem" }}>Loading chart data…</div>;
-  // }
-
+  const uniqueDevices = Array.from(new Set(mappedData.map(d => d.deviceID)));
   const seriesCount = uniqueDevices.length * chartFields.length;
+  const getColor = (idx: number) => `hsl(${Math.round((idx/seriesCount)*360)},70%,50%)`;
 
-  // helper to get HSL color
-  const getColor = (idx: number) =>
-    `hsl(${Math.round((idx / seriesCount) * 360)}, 70%, 50%)`;
-  
   return (
     <ResponsiveContainer width="100%" height={400}>
-      <LineChart
-        data={mappedData}
-        margin={{ left: 0, right: 0, top: 20, bottom: 130 }}
-      >
+      <LineChart data={mappedData} margin={{ top:20, bottom:130, left:0, right:0 }}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis
-          dataKey="dateStr"
-          angle={-90}
-          textAnchor="end"
-        />
+        <XAxis dataKey="dateStr" angle={-90} textAnchor="end" />
         <YAxis />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#1f2937",
-            border: "none",
-            borderRadius: "0.5rem",
-            color: "white"
-          }}
-          itemStyle={{ color: "white" }}
+        <Tooltip 
+          contentStyle={{ backgroundColor:"#1f2937", border:"none", borderRadius:"0.5rem", color:"white" }}
+          itemStyle={{ color:"white" }}
         />
-        <Legend />
-        
-
-          {uniqueDevices.map((dev, di) =>
-            chartFields.map((field, fi) => {
-              const idx = di * chartFields.length + fi;
-              return (
-                <Line
-                  key={`${dev}-${field}`}
-                  type="monotone"
-                  dataKey={(row: any) => row.deviceID === dev ? row[field] : null}
-                  name={`${dev} ${field}`}
-                  stroke={getColor(idx)}
-                  dot={false}
-                />
-              );
-            })
-          )}
+        <Legend onClick={handleLegendClick} />
+        {uniqueDevices.map((dev, di) =>
+          chartFields.map((field, fi) => {
+            const key = `${dev}-${field}`;
+            const idx = di * chartFields.length + fi;
+            return (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={(row: any) => row.deviceID === dev ? row[field] : null}
+                name={key}
+                stroke={getColor(idx)}
+                dot={false}
+                hide={hidden.has(key)}
+              />
+            );
+          })
+        )}
       </LineChart>
     </ResponsiveContainer>
   );
