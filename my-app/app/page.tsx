@@ -318,7 +318,7 @@ export default function Home() {
         <div className="p-4">
           {/* <DataChart1 token={auth.user?.access_token as string} /> */}
 
-          // chart buttons
+         
 <div className="p-4 bg-[var(--background)] shadow-md rounded mb-4">
   {/* Time Range */}
   <div className="flex flex-wrap gap-2 mb-4">
