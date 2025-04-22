@@ -184,14 +184,9 @@ export default function DataChart1({ data, chartFields, loading }: DataChart1Pro
           }}
           itemStyle={{ color: "white" }}
         />
-        {chartFields.map((field) => (
-          <Line
-            key={field}
-            type="monotone"
-            dataKey={field}
-            dot={false}
-          />
-        ))}
+        <Legend />
+        
+
           {uniqueDevices.map((dev, di) =>
             chartFields.map((field, fi) => {
               const idx = di * chartFields.length + fi;
