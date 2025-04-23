@@ -37,13 +37,12 @@ export default function LogoutCallback() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    fetch("/api/logout", { method: "POST" })
-      .then(() => {
-        auth.removeUser();
-        router.replace("/");
-      });
+    // Clear the refreshToken cookie inline
+    document.cookie = "refreshToken=; Path=/; Secure; SameSite=Strict; Max-Age=0";
+
+    auth.removeUser();
+    router.replace("/");
   }, [auth, router]);
 
   return <div>Logging out...</div>;
 }
-
