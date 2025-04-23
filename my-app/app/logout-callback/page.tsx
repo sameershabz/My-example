@@ -41,7 +41,6 @@ export default function LogoutCallback() {
     
 
     auth.removeUser();
-    document.cookie = "refreshToken=; Path=/; Secure; SameSite=Strict; Max-Age=0";
     router.replace("/");
   }, [auth, router]);
 
