@@ -36,9 +36,14 @@ export default function LogoutCallback() {
     if (window.location.search) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-    auth.removeUser();
-    router.replace("/");
+
+    fetch("/api/logout", { method: "POST" })
+      .then(() => {
+        auth.removeUser();
+        router.replace("/");
+      });
   }, [auth, router]);
 
   return <div>Logging out...</div>;
 }
+
