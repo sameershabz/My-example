@@ -36,12 +36,9 @@ export default function LogoutCallback() {
     if (window.location.search) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-
-    // Clear the refreshToken cookie inlines
     
 
     auth.removeUser();
-    document.cookie = "refreshToken=; Path=/; Secure; SameSite=Strict; Max-Age=0";
     router.replace("/");
   }, [auth, router]);
 
