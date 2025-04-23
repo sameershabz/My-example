@@ -22,9 +22,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [auth.isLoading, auth.isAuthenticated, router]);
 
-  // if (auth.isLoading || !auth.isAuthenticated) {
-  //   // return null; // show nothing while checking
-  // }
+  if (auth.isLoading || !auth.isAuthenticated) {
+    return null; // show nothing while checking
+  }
 
   return <>{children}</>;
 }
