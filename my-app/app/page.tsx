@@ -106,8 +106,10 @@ export default function Home() {
       points: "24"
     });
   
-    fetch(`${API_QUERY_URL}?${params}`)  // cookie + server‐side auth happen automatically
-
+    fetch(`${API_QUERY_URL}?${params}`, {
+      credentials: "include"  // ← tell the browser to send HttpOnly cookies
+    })
+    
       .then(async (res) => {
         if (!res.ok) {
           throw new Error(`API ${res.status}: ${await res.text()}`);
