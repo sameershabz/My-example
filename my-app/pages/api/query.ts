@@ -1,13 +1,19 @@
 // pages/api/query.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const AWS_QUERY_URL = process.env.AWS_QUERY_URL!; 
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // forward the same query string
-  const url = `${AWS_QUERY_URL}?${req.url?.split("?")[1]}`;
-  // TODO: refresh tokens if needed (using your refresh cookie)
-  const accessToken = await getValidAccessToken(req.cookies.refreshToken);
+  const AWS_QUERY_URL = process.env.AWS_QUERY_URL;
+  if (!AWS_QUERY_URL) {
+    return res.status(500).json({ error: "Missing AWS_QUERY_URL" });
+  }
+
+  const queryString = req.url?.split("?")[1] ?? "";
+  const url = `${AWS_QUERY_URL}?${queryString}`;
+
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return res.status(401).json({ error: "Missing refresh token" });
+
+  const accessToken = await getValidAccessToken(refreshToken);
 
   const awsRes = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -17,8 +23,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.status(awsRes.status).send(body);
 }
 
-async function getValidAccessToken(refreshToken?: string) {
-  // call your auth provider’s token endpoint with the refresh token
-  // return a fresh access_token string
-  return "<new-access-token>";
+async function getValidAccessToken(refreshToken: string): Promise<string> {
+  const clientId = process.env.COGNITO_CLIENT_ID!;
+  const response = await fetch(
+    "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com/oauth2/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: clientId,
+        refresh_token: refreshToken,
+      }),
+    }
+  );
+
+  const data = await response.json();
+  return data.access_token;
 }
