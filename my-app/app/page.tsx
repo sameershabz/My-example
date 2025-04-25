@@ -72,9 +72,8 @@ export default function Home() {
   const [apiData, setApiData] = useState<ApiDataItem[]>([]);
 
 
-  const API_QUERY_URL = "https://aficym0116.execute-api.us-east-1.amazonaws.com/QueryAPI";
-  const API_COMMAND_URL = "https://3fo7p4w6v6.execute-api.us-east-1.amazonaws.com/SendDataToESP";
-
+  const API_QUERY_URL   = "/api/query";
+  const API_COMMAND_URL = "/api/command";
   // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
     const clientId = "79ufsa70isosab15kpcmlm628d";
@@ -95,7 +94,7 @@ export default function Home() {
     if (!auth.isAuthenticated || !startDate || !endDate) return;
   
     setLoading(true);
-    const token = auth.user!.access_token!;
+    // const token = auth.user!.access_token!;
   
     // strip off milliseconds:
     const startIso = startDate.toISOString().split('.')[0] + 'Z';
@@ -107,9 +106,8 @@ export default function Home() {
       points: "24"
     });
   
-    fetch(`${API_QUERY_URL}?${params}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    fetch(`${API_QUERY_URL}?${params}`)  // cookie + server‐side auth happen automatically
+
       .then(async (res) => {
         if (!res.ok) {
           throw new Error(`API ${res.status}: ${await res.text()}`);
@@ -243,12 +241,10 @@ export default function Home() {
 
     fetch(API_COMMAND_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${auth.user?.id_token}`, 
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
+    
     
       .then(async (res) => {
         const text = await res.text();
