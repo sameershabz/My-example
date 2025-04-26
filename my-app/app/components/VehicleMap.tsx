@@ -28,6 +28,13 @@ interface VehicleMapProps {
 }
 
 export default function VehicleMap({ devices }: VehicleMapProps) {
+  if (devices.length === 0) {
+    return (
+      <div className="text-center text-white py-20">
+        No location data available.
+      </div>
+    );
+  }
   const mapRef = useRef<LeafletMap | null>(null);
   // Force a unique key if needed during hot reload
   const [mapKey] = useState(Date.now());
@@ -71,14 +78,16 @@ export default function VehicleMap({ devices }: VehicleMapProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {devices.map((d) => (
-          <Marker key={d.deviceId} position={[d.latitude, d.longitude]}>
+          <Marker key={d.deviceId} position={[Number(d.latitude), Number(d.longitude)]}>
             <Popup>
               <div>
                 <strong>{d.deviceId}</strong>
                 <br />
-                {new Date(d.timestamp).toLocaleString()}
+                Timestamp: {new Date(d.timestamp).toLocaleString()}
                 <br />
-                Lat/Lon: {d.latitude.toFixed(4)}, {d.longitude.toFixed(4)}
+                Lat: {Number(d.latitude).toFixed(5)}
+                <br />
+                Lon: {Number(d.longitude).toFixed(5)}
                 <br />
                 SoC: {d.soc}%
                 <br />

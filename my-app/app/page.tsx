@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "react-oidc-context";
 import DataChart1 from "./components/DataChart1";
 import dynamic from "next/dynamic";
@@ -71,6 +71,25 @@ export default function Home() {
   const [commandSuccess, setCommandSuccess] = useState("");
   const [apiData, setApiData] = useState<ApiDataItem[]>([]);
 
+  const deviceLocations = useMemo(() => {
+    const latest: Record<string, ApiDataItem> = {};
+    apiData.forEach((item) => {
+      if (!item.gnss) return;
+      const id = item.deviceID;
+      if (!latest[id] || new Date(item.timestamp) > new Date(latest[id].timestamp)) {
+        latest[id] = item;
+      }
+    });
+    return Object.values(latest).map((item) => ({
+      deviceId: item.deviceID,
+      latitude: item.gnss!.lat,
+      longitude: item.gnss!.lon,
+      timestamp: item.timestamp,
+      soc: Math.round(Math.random() * 100),
+      efficiency: Math.round(Math.random() * 100),
+    }));
+  }, [apiData]);
+
 
   const API_QUERY_URL   = "/api/query";
   const API_COMMAND_URL = "/api/command";
@@ -119,6 +138,9 @@ export default function Home() {
       .then((json) => {
         setApiData(Array.isArray(json) ? json : []);
       })
+
+      
+
       .catch((err) => {
         console.error(err);
         setError(err.message);
@@ -127,6 +149,7 @@ export default function Home() {
       .finally(() => {
         setLoading(false);
       });
+      
   }, [auth.isAuthenticated, startDate, endDate]);
 
 
@@ -305,9 +328,9 @@ export default function Home() {
       </div>
       <div className="max-w-[90vw] mx-auto">
         <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
-          <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
-            EV Telematics Hub
-          </span>
+        <span className="text-white">
+          EV Telematics Hub
+        </span>
         </h1>
         <div className="p-4">
           <h1 className="text-sm text-white mb-6 text-center">V1.05: Secure, injection, sourcing, mapping, graphing</h1>
@@ -459,7 +482,7 @@ export default function Home() {
         </section>
         <section className="p-4">
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
-          <VehicleMap devices={sampleDevices} />
+          <VehicleMap devices={deviceLocations} />
         </section>
         
         
