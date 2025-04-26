@@ -1,21 +1,17 @@
-// pages/api/query.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const AWS_GNSS_URL = process.env.AWS_GNSS_URL;
   if (!AWS_GNSS_URL) {
-    return res.status(500).json({ error: "Missing AWS_QUERY_URL" });
+    return res.status(500).json({ error: "Missing AWS_GNSS_URL" });
   }
-
-  const queryString = req.url?.split("?")[1] ?? "";
-  const url = `${AWS_GNSS_URL}?${queryString}`;
 
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) return res.status(401).json({ error: "Missing refresh token" });
 
   const accessToken = await getValidAccessToken(refreshToken);
 
-  const awsRes = await fetch(url, {
+  const awsRes = await fetch(AWS_GNSS_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
