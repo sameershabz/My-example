@@ -141,15 +141,15 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (!auth.isAuthenticated) return;
+    if (!auth.isAuthenticated || !auth.user) return;
     fetch(API_LATEST_URL, { credentials: "include" })
       .then(async res => {
-        if (!res.ok) throw new Error(`Latest API ${res.status}`);
+        if (!res.ok) throw new Error(`Latest API ${res.status}: ${await res.text()}`);
         return res.json() as Promise<DeviceData[]>;
       })
       .then(data => setLatestData(data))
       .catch(err => console.error("Fetching latest locations failed:", err));
-  }, [auth.isAuthenticated]);
+  }, [auth.isAuthenticated, auth.user]);
 
   // Update date range based on selected timeRange
   useEffect(() => {
@@ -477,7 +477,11 @@ export default function Home() {
         </section>
         <section className="p-4">
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
-          <VehicleMap devices={latestData} />
+          {latestData.length === 0 ? (
+            <div className="text-center text-white">Loading latest locations...</div>
+          ) : (
+            <VehicleMap devices={latestData} />
+          )}
         </section>
         
         
