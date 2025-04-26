@@ -14,7 +14,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-interface DeviceData {
+export interface DeviceData {
   deviceId: string;
   latitude: number;
   longitude: number;

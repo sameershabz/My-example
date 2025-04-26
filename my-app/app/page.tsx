@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "react-oidc-context";
 import DataChart1 from "./components/DataChart1";
 import dynamic from "next/dynamic";
@@ -9,6 +9,7 @@ import { sampleDevices } from "./components/sampleDevices";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import type { ApiDataItem } from "./components/DataChart1";
+import type { DeviceData } from "./components/VehicleMap";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -70,29 +71,14 @@ export default function Home() {
   const [commandLoading, setCommandLoading] = useState(false);
   const [commandSuccess, setCommandSuccess] = useState("");
   const [apiData, setApiData] = useState<ApiDataItem[]>([]);
+  const [latestData, setLatestData] = useState<DeviceData[]>([]);
 
-  const deviceLocations = useMemo(() => {
-    const latest: Record<string, ApiDataItem> = {};
-    apiData.forEach((item) => {
-      if (!item.gnss) return;
-      const id = item.deviceID;
-      if (!latest[id] || new Date(item.timestamp) > new Date(latest[id].timestamp)) {
-        latest[id] = item;
-      }
-    });
-    return Object.values(latest).map((item) => ({
-      deviceId: item.deviceID,
-      latitude: item.gnss!.lat,
-      longitude: item.gnss!.lon,
-      timestamp: item.timestamp,
-      soc: Math.round(Math.random() * 100),
-      efficiency: Math.round(Math.random() * 100),
-    }));
-  }, [apiData]);
+
 
 
   const API_QUERY_URL   = "/api/query";
   const API_COMMAND_URL = "/api/command";
+  const API_LATEST_URL = "/api/GNSSTimestream";
   // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
     const clientId = "79ufsa70isosab15kpcmlm628d";
@@ -154,7 +140,16 @@ export default function Home() {
 
 
 
-  
+  useEffect(() => {
+    if (!auth.isAuthenticated) return;
+    fetch(API_LATEST_URL, { credentials: "include" })
+      .then(async res => {
+        if (!res.ok) throw new Error(`Latest API ${res.status}`);
+        return res.json() as Promise<DeviceData[]>;
+      })
+      .then(data => setLatestData(data))
+      .catch(err => console.error("Fetching latest locations failed:", err));
+  }, [auth.isAuthenticated]);
 
   // Update date range based on selected timeRange
   useEffect(() => {
@@ -482,7 +477,7 @@ export default function Home() {
         </section>
         <section className="p-4">
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
-          <VehicleMap devices={deviceLocations} />
+          <VehicleMap devices={latestData} />
         </section>
         
         
