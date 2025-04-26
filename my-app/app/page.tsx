@@ -78,7 +78,7 @@ export default function Home() {
 
   const API_QUERY_URL   = "/api/query";
   const API_COMMAND_URL = "/api/command";
-  const API_LATEST_URL = "/api/LatestTimestream";
+  const API_LATEST_URL = "/api/GNSSTime";
   // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
     const clientId = "79ufsa70isosab15kpcmlm628d";
