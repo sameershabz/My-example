@@ -1,9 +1,6 @@
-// pages/api/latest.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET") return res.status(405).end();
-
   const AWS_LATEST_URL = process.env.AWS_LATEST_URL;
   if (!AWS_LATEST_URL) {
     return res.status(500).json({ error: "Missing AWS_LATEST_URL" });
@@ -15,14 +12,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const accessToken = await getValidAccessToken(refreshToken);
 
   const awsRes = await fetch(AWS_LATEST_URL, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-    },
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  const text = await awsRes.text();
-  res.status(awsRes.status).send(text);
+  const body = await awsRes.text();
+  res.status(awsRes.status).send(body);
 }
 
 async function getValidAccessToken(refreshToken: string): Promise<string> {
