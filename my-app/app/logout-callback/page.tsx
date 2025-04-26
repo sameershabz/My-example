@@ -10,25 +10,16 @@ export default function LogoutCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    // 1. Clean up URL (remove any query params)
-    if (window.location.search) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    // 2. Clear OIDC state
+    // 1) Clear OIDC state
     auth.removeUser();
 
-    // 3. Prevent BACK navigating into protected pages
-    //    Push the sign-in route onto history, then intercept popstate
-    window.history.pushState(null, "", "/signin");
-    const onPop = () => router.replace("/signin");
-    window.addEventListener("popstate", onPop);
+    // 2) Replace current history entry with /signin
+    //    so Back won’t land on this page
+    window.history.replaceState(null, "", "/signin");
 
-    // 4. Redirect to sign-in
+    // 3) Redirect there and force a full reload (no cache)
     router.replace("/signin");
-
-    // Cleanup listener
-    return () => window.removeEventListener("popstate", onPop);
+    window.location.reload();
   }, [auth, router]);
 
   return <div>Logging out…</div>;
