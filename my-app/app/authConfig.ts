@@ -1,21 +1,23 @@
-// pages/api/save-refresh-token.ts
-import type { NextApiRequest, NextApiResponse } from "next";
-import { serialize } from "cookie";
+// app/authConfig.ts
+import type { User } from "oidc-client-ts"; // <-- this package
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { refresh_token } = req.body;
-  if (!refresh_token) return res.status(400).json({ error: "Missing refresh token" });
 
-  res.setHeader(
-    "Set-Cookie",
-    serialize("refreshToken", refresh_token, {
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    })
-  );
+export const cognitoAuthConfig = {
+  authority: "https://…",
+  client_id: "…",
+  redirect_uri: "…",
+  response_type: "code",
+  scope: "openid email",
 
-  res.status(200).json({ message: "Refresh token stored" });
-}
+  onSigninCallback: async (user: User | undefined) => {
+    const refreshToken = user?.refresh_token;
+    if (refreshToken) {
+      await fetch("/api/save-refresh-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: "include",
+      });
+    }    
+  },
+};
