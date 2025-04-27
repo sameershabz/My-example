@@ -145,9 +145,19 @@ export default function Home() {
     fetch(API_LATEST_URL, { credentials: "include" })
       .then(async res => {
         if (!res.ok) throw new Error(`Latest API ${res.status}: ${await res.text()}`);
-        return res.json() as Promise<DeviceData[]>;
+        return res.json();
       })
-      .then(data => setLatestData(data))
+      .then(raw => {
+        const mapped: DeviceData[] = raw.map((item: any) => ({
+          deviceId:   item.deviceID,
+          latitude:   item.gnss?.lat   ?? 0,
+          longitude:  item.gnss?.lon   ?? 0,
+          timestamp:  item.timestamp,
+          soc:        item.soc,
+          efficiency: item.efficiency,
+        }));
+        setLatestData(mapped);
+      })
       .catch(err => console.error("Fetching latest locations failed:", err));
   }, [auth.isAuthenticated, auth.user]);
 
