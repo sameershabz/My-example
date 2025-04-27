@@ -340,7 +340,10 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 bg-[var(--background)]">
       <div className="flex justify-end mb-4">
-        <button onClick={signOutRedirect} className="bg-red-600 text-white px-4 py-2 rounded">
+        <button
+          onClick={signOutRedirect}
+          className="bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg cursor-pointer px-4 py-2 rounded"
+        >
           Logout
         </button>
       </div>
@@ -358,16 +361,21 @@ export default function Home() {
           {/* <DataChart1 token={auth.user?.access_token as string} /> */}
 
          
-<div className="p-4 bg-[var(--background)] shadow-md rounded mb-4">
+<div className="p-4 bg-[var(--background)] shadow-md rounded cursor-pointer mb-4">
   {/* Time Range */}
   <div className="flex flex-wrap gap-2 mb-4">
     {timeRanges.map((r) => (
-      <button key={r.value}
+      <button
+        key={r.value}
         onClick={() => setTimeRange(r.value)}
-        className={`px-4 py-2 rounded text-sm ${
-          timeRange === r.value ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+        className={`px-4 py-2 rounded text-sm cursor-pointer ${
+          timeRange === r.value
+            ? "bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg"
+            : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
         }`}
-      >{r.label}</button>
+      >
+        {r.label}
+      </button>
     ))}
   </div>
   {/* Custom Pickers */}
@@ -388,42 +396,54 @@ export default function Home() {
       />
       <button
         onClick={() => { setStartDate(null); setEndDate(null); setTimeRange("all"); }}
-        className="px-4 py-2 rounded bg-gray-600 text-white"
-      >Clear</button>
+        className="px-4 py-2 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 shadow-md hover:shadow-lg"
+      >
+        Clear
+      </button>
     </div>
   )}
   {/* Device Filter */}
   <div className="flex flex-wrap gap-2 mb-4">
     {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
-      <button key={dev}
-      onClick={() => {
-        setSelectedDevices((prev) => {
-          if (dev === "all") return ["all"];
-          const next = prev.includes(dev)
-            ? prev.filter((d) => d !== dev)
-            : [...prev.filter((d) => d !== "all"), dev];
-          return next.length ? next : ["all"];
-        });
-      }}
-        className={`px-3 py-1 rounded text-sm ${
-          selectedDevices.includes(dev) ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+      <button
+        key={dev}
+        onClick={() => {
+          setSelectedDevices((prev) => {
+            if (dev === "all") return ["all"];
+            const next = prev.includes(dev)
+              ? prev.filter((d) => d !== dev)
+              : [...prev.filter((d) => d !== "all"), dev];
+            return next.length ? next : ["all"];
+          });
+        }}
+        className={`px-3 py-1 rounded cursor-pointer text-sm ${
+          selectedDevices.includes(dev)
+            ? "bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg"
+            : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
         }`}
-      >{dev}</button>
+      >
+        {dev}
+      </button>
     ))}
   </div>
   {/* Field Selector */}
   <div className="flex flex-wrap gap-2">
     {allFields.map((f) => (
-      <button key={f}
+      <button
+        key={f}
         onClick={() =>
           setChartFields((cf) =>
             cf.includes(f) ? cf.filter((x) => x !== f) : [...cf, f]
           )
         }
-        className={`px-3 py-1 rounded text-sm ${
-          chartFields.includes(f) ? "bg-blue-600 text-white" : "bg-gray-200 text-black"
+        className={`px-3 py-1 rounded cursor-pointer text-sm ${
+          chartFields.includes(f)
+            ? "bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg"
+            : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
         }`}
-      >{f}</button>
+      >
+        {f}
+      </button>
     ))}
   </div>
 </div>
@@ -432,7 +452,7 @@ export default function Home() {
 
 
         </div>
-        <section className="bg-[var(--background)] shadow-md rounded p-4">
+        <section className="bg-[var(--background)] shadow-md rounded cursor-pointer p-4">
           <h2 className="text-2xl font-semibold mb-4">Send Command to ESP</h2>
           <form onSubmit={handleCommandSubmit}>
             <div className="mb-4">
@@ -442,7 +462,7 @@ export default function Home() {
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 placeholder="Enter command (e.g., turn_on)"
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded cursor-pointer"
                 required
               />
             </div>
@@ -455,7 +475,7 @@ export default function Home() {
                     value={param.key}
                     onChange={(e) => handleParamChange(index, "key", e.target.value)}
                     placeholder="Key"
-                    className="w-1/2 p-2 border rounded"
+                    className="w-1/2 p-2 border rounded cursor-pointer"
                     required
                   />
                   <input
@@ -463,13 +483,13 @@ export default function Home() {
                     value={param.value}
                     onChange={(e) => handleParamChange(index, "value", e.target.value)}
                     placeholder="Value"
-                    className="w-1/2 p-2 border rounded"
+                    className="w-1/2 p-2 border rounded cursor-pointer"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveParam(index)}
-                    className="px-2 py-1 bg-red-500 text-white rounded"
+                    className="px-2 py-1 bg-red-500 text-white rounded cursor-pointer shadow-md hover:shadow-lg hover:bg-red-600"
                   >
                     Remove
                   </button>
@@ -479,7 +499,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleAddParam}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded cursor-pointer"
+                  className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg rounded cursor-pointer"
                 >
                   Add Parameter
                 </button>
@@ -489,7 +509,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={commandLoading}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded cursor-pointer"
+                className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg rounded cursor-pointer"
               >
                 {commandLoading ? "Sending..." : "Send Command"}
               </button>
@@ -517,14 +537,14 @@ export default function Home() {
                   value={refreshIntervalSec}
                   min={1}
                   onChange={e => setRefreshIntervalSec(Number(e.target.value))}
-                  className="w-16 p-1 border rounded"
+                  className="w-16 p-1 border rounded cursor-pointer"
                 />
                 <span className="text-white">sec</span>
               </div>
             )}
             <button
               onClick={fetchLatestData}
-              className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer"
+              className="px-4 py-2 bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg rounded cursor-pointer"
             >
               Refresh Now
             </button>
