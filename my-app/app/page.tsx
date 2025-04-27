@@ -524,7 +524,7 @@ export default function Home() {
             )}
             <button
               onClick={fetchLatestData}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer"
             >
               Refresh Now
             </button>
