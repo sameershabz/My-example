@@ -507,7 +507,7 @@ export default function Home() {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={e => setAutoRefresh(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-600"
+                className="form-checkbox h-5 w-5 text-blue-600 cursor-pointer"
               />
             </label>
             {autoRefresh && (
