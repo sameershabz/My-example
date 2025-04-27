@@ -72,6 +72,28 @@ export default function Home() {
   const [commandSuccess, setCommandSuccess] = useState("");
   const [apiData, setApiData] = useState<ApiDataItem[]>([]);
   const [latestData, setLatestData] = useState<DeviceData[]>([]);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState(5);
+
+  const fetchLatestData = () => {
+    fetch(API_LATEST_URL, { credentials: "include" })
+      .then(async res => {
+        if (!res.ok) throw new Error(`Latest API ${res.status}: ${await res.text()}`);
+        return res.json();
+      })
+      .then(raw => {
+        const mapped: DeviceData[] = raw.map((item: any) => ({
+          deviceId:   item.deviceID,
+          latitude:   item.gnss?.lat   ?? 0,
+          longitude:  item.gnss?.lon   ?? 0,
+          timestamp:  item.timestamp,
+          soc:        item.soc,
+          efficiency: item.efficiency,
+        }));
+        setLatestData(mapped);
+      })
+      .catch(err => console.error("Fetching latest locations failed:", err));
+  };
 
 
 
@@ -142,24 +164,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.user) return;
-    fetch(API_LATEST_URL, { credentials: "include" })
-      .then(async res => {
-        if (!res.ok) throw new Error(`Latest API ${res.status}: ${await res.text()}`);
-        return res.json();
-      })
-      .then(raw => {
-        const mapped: DeviceData[] = raw.map((item: any) => ({
-          deviceId:   item.deviceID,
-          latitude:   item.gnss?.lat   ?? 0,
-          longitude:  item.gnss?.lon   ?? 0,
-          timestamp:  item.timestamp,
-          soc:        item.soc,
-          efficiency: item.efficiency,
-        }));
-        setLatestData(mapped);
-      })
-      .catch(err => console.error("Fetching latest locations failed:", err));
-  }, [auth.isAuthenticated, auth.user]);
+    fetchLatestData();
+    let interval: ReturnType<typeof setInterval>;
+    if (autoRefresh) {
+      interval = setInterval(fetchLatestData, refreshIntervalSec * 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [auth.isAuthenticated, auth.user, autoRefresh, refreshIntervalSec]);
 
   // Update date range based on selected timeRange
   useEffect(() => {
@@ -487,6 +500,35 @@ export default function Home() {
         </section>
         <section className="p-4">
           <h1 className="text-2xl mb-4">Vehicle Map</h1>
+          <div className="flex items-center gap-4 mb-4">
+            <label className="flex items-center cursor-pointer text-white">
+              <span className="mr-2">Auto Refresh</span>
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={e => setAutoRefresh(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+            </label>
+            {autoRefresh && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={refreshIntervalSec}
+                  min={1}
+                  onChange={e => setRefreshIntervalSec(Number(e.target.value))}
+                  className="w-16 p-1 border rounded"
+                />
+                <span className="text-white">sec</span>
+              </div>
+            )}
+            <button
+              onClick={fetchLatestData}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              Refresh Now
+            </button>
+          </div>
           {latestData.length === 0 ? (
             <div className="text-center text-white">Loading latest locations...</div>
           ) : (
