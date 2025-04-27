@@ -370,7 +370,7 @@ export default function Home() {
         onClick={() => setTimeRange(r.value)}
         className={`px-4 py-2 rounded text-sm cursor-pointer ${
           timeRange === r.value
-            ? "bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg"
+            ? "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700"
             : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
         }`}
       >
@@ -418,7 +418,7 @@ export default function Home() {
         }}
         className={`px-3 py-1 rounded cursor-pointer text-sm ${
           selectedDevices.includes(dev)
-            ? "bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg"
+            ? "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700"
             : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
         }`}
       >
@@ -438,7 +438,7 @@ export default function Home() {
         }
         className={`px-3 py-1 rounded cursor-pointer text-sm ${
           chartFields.includes(f)
-            ? "bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg"
+            ? "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700"
             : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
         }`}
       >
