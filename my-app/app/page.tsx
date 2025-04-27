@@ -342,7 +342,7 @@ export default function Home() {
       <div className="flex justify-end mb-4">
         <button
           onClick={signOutRedirect}
-          className="bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg cursor-pointer px-4 py-2 rounded"
+          className="bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg cursor-pointer px-4 py-2 rounded"
         >
           Logout
         </button>
@@ -499,7 +499,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleAddParam}
-                  className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg rounded cursor-pointer"
+                  className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-300 shadow-md hover:shadow-lg rounded cursor-pointer"
                 >
                   Add Parameter
                 </button>
@@ -509,7 +509,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={commandLoading}
-                className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg rounded cursor-pointer"
+                className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-300 shadow-md hover:shadow-lg rounded cursor-pointer"
               >
                 {commandLoading ? "Sending..." : "Send Command"}
               </button>
@@ -544,7 +544,7 @@ export default function Home() {
             )}
             <button
               onClick={fetchLatestData}
-              className="px-4 py-2 bg-white text-black border border-gray-400 hover:bg-gray-100 shadow-md hover:shadow-lg rounded cursor-pointer"
+              className="px-4 py-2 bg-white text-black border border-gray-400 hover:bg-gray-300 shadow-md hover:shadow-lg rounded cursor-pointer"
             >
               Refresh Now
             </button>
