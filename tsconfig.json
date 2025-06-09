@@ -13,9 +13,9 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": ".",                        // ✅ Required for paths to work
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["app/*"]                    // ✅ Matches /app/components
+      "@/*": ["./*"]
     },
     "plugins": [
       {

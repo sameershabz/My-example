@@ -2,185 +2,96 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --text-color-default: #0f172a;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --border: #e2e8f0;
-  --input: #ffffff;
-  --ring: #3b82f6;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0f172a;
-    --foreground: #f8fafc;
-    --text-color-default: #f1f5f9;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --card: #1e293b;
-    --card-foreground: #f1f5f9;
-    --border: #334155;
-    --input: #1e293b;
-    --ring: #3b82f6;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
   }
 }
 
 @layer base {
   * {
-    @apply border-gray-200 dark:border-gray-700;
+    @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-sans;
-    background-color: var(--background);
-    color: var(--text-color-default);
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-semibold;
+    @apply bg-background text-foreground;
   }
 }
 
-@layer components {
-  /* Custom styles for react-datepicker */
-  .react-datepicker-wrapper {
-    @apply w-full;
-  }
-
-  .react-datepicker__input-container input {
-    @apply w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
-  }
-
-  /* Custom button styles */
-  .btn-primary {
-    @apply px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors;
-  }
-
-  .btn-secondary {
-    @apply px-4 py-2 bg-gray-200 text-gray-900 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors;
-  }
-
-  .btn-danger {
-    @apply px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors;
-  }
-
-  /* Card styles */
-  .card {
-    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm;
-  }
-
-  /* Form styles */
-  .form-input {
-    @apply w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors;
-  }
-
-  .form-label {
-    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
-  }
-
-  /* Navigation styles */
-  .nav-link {
-    @apply px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-800;
-  }
-
-  .nav-link.active {
-    @apply bg-blue-600 text-white;
-  }
+/* Leaflet map styles */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
 }
 
-@layer utilities {
-  /* Custom styles for Leaflet map */
-  .leaflet-container {
-    @apply h-full w-full;
-  }
-
-  .custom-div-icon {
-    @apply bg-transparent border-none;
-  }
-
-  .vehicle-popup .leaflet-popup-content-wrapper {
-    @apply rounded-lg p-0;
-  }
-
-  .vehicle-popup .leaflet-popup-content {
-    @apply m-0 p-0;
-  }
-
-  /* Animation utilities */
-  .animate-gradient-x {
-    background-size: 200% 200%;
-    animation: gradient-x 15s ease infinite;
-  }
-
-  @keyframes gradient-x {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-
-  /* Form utilities */
-  .hide-spin-button input[type="number"]::-webkit-inner-spin-button,
-  .hide-spin-button input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-
-  .hide-spin-button input[type="number"] {
-    -moz-appearance: textfield;
-  }
-
-  /* Loading spinner */
-  .spinner {
-    @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
-  }
-
-  /* Status indicators */
-  .status-online {
-    @apply bg-green-500;
-  }
-
-  .status-offline {
-    @apply bg-red-500;
-  }
-
-  .status-warning {
-    @apply bg-yellow-500;
-  }
-
-  /* Responsive text utilities */
-  .text-responsive {
-    @apply text-sm sm:text-base lg:text-lg;
-  }
-
-  /* Shadow utilities */
-  .shadow-card {
-    @apply shadow-sm hover:shadow-md transition-shadow;
-  }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* Dark mode specific overrides */
-@media (prefers-color-scheme: dark) {
-  .react-datepicker__input-container input {
-    @apply bg-gray-800 border-gray-600 text-white;
-  }
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
 
-  .leaflet-popup-content-wrapper {
-    @apply bg-gray-800 text-white;
-  }
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600;
+}
+
+/* Date picker custom styles */
+.react-datepicker-wrapper {
+  @apply w-full;
+}
+
+.react-datepicker__input-container input {
+  @apply w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
 }
