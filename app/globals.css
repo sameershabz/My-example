@@ -50,11 +50,9 @@
 }
 
 @layer base {
-  * {
-    /* removed border-gray-200 / dark:border-gray-700 */
-  }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color:             hsl(var(--foreground));
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
