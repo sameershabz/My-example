@@ -1,563 +1,319 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "react-oidc-context";
-import DataChart1 from "./components/DataChart1";
-import dynamic from "next/dynamic";
-const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false });
-import { sampleDevices } from "./components/sampleDevices";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import type { ApiDataItem } from "./components/DataChart1";
-import type { DeviceData } from "./components/VehicleMap";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ChartData,
-} from "chart.js";
+import { useState, useEffect } from "react"
+import { useAuth } from "react-oidc-context"
+import DataChart1, { type ApiDataItem } from "./components/DataChart1"
+import dynamic from "next/dynamic"
+import { sampleDevices } from "./components/sampleDevices"
+import TimeRangeSelector, { type TimeRange } from "./components/TimeRangeSelector"
+import DeviceSelector from "./components/DeviceSelector"
+import FieldSelector from "./components/FieldSelector"
+import CommandInterface from "./components/CommandInterface"
+import DashboardLayout from "./components/layout/DashboardLayout"
+import { Loader2, RefreshCw } from "lucide-react"
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+// Import VehicleMap dynamically to avoid SSR issues with Leaflet
+const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false })
 
-
-// type DataItem = {
-//   DeviceId: string;
-//   timestamp: string;
-//   [key: string]: any;
-// };
-
-type ParamItem = {
-  key: string;
-  value: string;
-};
-
-type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom";
-const timeRanges: { label: string; value: TimeRange }[] = [
-  { label: "24hr",   value: "24hr" },
-  { label: "7 Day",  value: "7d"   },
-  { label: "1 Month",value: "1m"   },
-  { label: "1 Year", value: "1y"   },
-  { label: "All Time",value: "all" },
-  { label: "Custom", value: "custom"}
-];
-
+// Define all available fields
 const allFields = [
-  "quality_min","quality_avg","lat","lon","alt_m","speed_kmh","heading_deg",
-  "voltage_v","min","avg","max","temperature_c","signal_strength_dbm",
-  "speed","accel_x","accel_y","accel_z","power_kw"
-];
-
+  "quality_min",
+  "quality_avg",
+  "lat",
+  "lon",
+  "alt_m",
+  "speed_kmh",
+  "heading_deg",
+  "voltage_v",
+  "min",
+  "avg",
+  "max",
+  "temperature_c",
+  "signal_strength_dbm",
+  "speed",
+  "accel_x",
+  "accel_y",
+  "accel_z",
+  "power_kw",
+  "soc",
+  "efficiency",
+]
 
 export default function Home() {
-  const auth = useAuth();
+  const auth = useAuth()
 
-  const [data, setData] = useState<ApiDataItem[]>([]);
-  const [filteredData, setFilteredData] = useState<ApiDataItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [chartFields, setChartFields] = useState<string[]>(["voltage_v"]);
-  const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"]);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>("1m");
-  const [chartData, setChartData] = useState<ChartData<"line">>({ labels: [], datasets: [] });
-  const [command, setCommand] = useState("");
-  const [params, setParams] = useState<ParamItem[]>([]);
-  const [commandLoading, setCommandLoading] = useState(false);
-  const [commandSuccess, setCommandSuccess] = useState("");
-  const [apiData, setApiData] = useState<ApiDataItem[]>([]);
-  const [latestData, setLatestData] = useState<DeviceData[]>([]);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshIntervalSec, setRefreshIntervalSec] = useState(5);
+  // State for data and filtering
+  const [apiData, setApiData] = useState<ApiDataItem[]>([])
+  const [filteredData, setFilteredData] = useState<ApiDataItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const fetchLatestData = () => {
-    fetch(API_LATEST_URL, { credentials: "include" })
-      .then(async res => {
-        if (!res.ok) throw new Error(`Latest API ${res.status}: ${await res.text()}`);
-        return res.json();
-      })
-      .then(raw => {
-        const mapped: DeviceData[] = raw.map((item: any) => ({
-          deviceId:   item.deviceID,
-          latitude:   item.gnss?.lat   ?? 0,
-          longitude:  item.gnss?.lon   ?? 0,
-          timestamp:  item.timestamp,
-          soc:        item.soc,
-          efficiency: item.efficiency,
-        }));
-        setLatestData(mapped);
-      })
-      .catch(err => console.error("Fetching latest locations failed:", err));
-  };
+  // State for filters
+  const [chartFields, setChartFields] = useState<string[]>(["voltage_v", "soc"])
+  const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"])
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
+  const [timeRange, setTimeRange] = useState<TimeRange>("24hr")
 
+  // State for map
+  const [latestData, setLatestData] = useState<any[]>([])
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState(30)
+  const [refreshing, setRefreshing] = useState(false)
 
+  // API endpoints
+  const API_QUERY_URL = "/api/query"
+  const API_LATEST_URL = "/api/GNSSTime"
 
+  // Check if auth is available and authenticated
+  const isAuthenticated = auth?.isAuthenticated ?? false
+  const isLoading = auth?.isLoading ?? true
 
-  const API_QUERY_URL   = "/api/query";
-  const API_COMMAND_URL = "/api/command";
-  const API_LATEST_URL = "/api/GNSSTime";
-  // Use the same sign-out function as in Dashboard:
-  const signOutRedirect = () => {
-    const clientId = "79ufsa70isosab15kpcmlm628d";
-    const logoutUri = "https://telematicshub.vercel.app/logout-callback";
-    const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
-    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
-  };
+  // Fetch latest location data
+  const fetchLatestData = async () => {
+    if (!isAuthenticated) return
 
+    setRefreshing(true)
+    try {
+      const res = await fetch(API_LATEST_URL, { credentials: "include" })
 
+      if (!res.ok) {
+        throw new Error(`Latest API ${res.status}: ${await res.text()}`)
+      }
 
+      const raw = await res.json()
+      const mapped = Array.isArray(raw)
+        ? raw.map((item: any) => ({
+            deviceId: item.deviceID || item.deviceId,
+            latitude: item.gnss?.lat ?? item.latitude ?? 0,
+            longitude: item.gnss?.lon ?? item.longitude ?? 0,
+            timestamp: item.timestamp,
+            soc: item.soc ?? 0,
+            efficiency: item.efficiency ?? 0,
+          }))
+        : []
 
-
-
-
-
-
-  useEffect(() => {
-    if (!auth.isAuthenticated || !startDate || !endDate) return;
-  
-    setLoading(true);
-    // const token = auth.user!.access_token!;
-  
-    // strip off milliseconds:
-    const startIso = startDate.toISOString().split('.')[0] + 'Z';
-    const endIso   = endDate  .toISOString().split('.')[0] + 'Z';
-  
-    const params = new URLSearchParams({
-      start:  startIso,
-      end:    endIso,
-      points: "24"
-    });
-  
-    fetch(`${API_QUERY_URL}?${params}`, {
-      credentials: "include"  // ← tell the browser to send HttpOnly cookies
-    })
-    
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`API ${res.status}: ${await res.text()}`);
-        }
-        return res.json();
-      })
-      .then((json) => {
-        setApiData(Array.isArray(json) ? json : []);
-      })
-
-      
-
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-        setApiData([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-      
-  }, [auth.isAuthenticated, startDate, endDate]);
-
-
-
-  useEffect(() => {
-    if (!auth.isAuthenticated || !auth.user) return;
-    fetchLatestData();
-    let interval: ReturnType<typeof setInterval>;
-    if (autoRefresh) {
-      interval = setInterval(fetchLatestData, refreshIntervalSec * 1000);
+      setLatestData(mapped)
+    } catch (err) {
+      console.error("Fetching latest locations failed:", err)
+      // If API fails, use sample data for demo purposes
+      setLatestData(sampleDevices)
+    } finally {
+      setRefreshing(false)
     }
+  }
+
+  // Fetch historical data based on time range
+  const fetchHistoricalData = async () => {
+    if (!isAuthenticated || !startDate || !endDate) return
+
+    setLoading(true)
+    setError("")
+
+    // Format dates for API
+    const startIso = startDate.toISOString().split(".")[0] + "Z"
+    const endIso = endDate.toISOString().split(".")[0] + "Z"
+
+    const params = new URLSearchParams({
+      start: startIso,
+      end: endIso,
+      points: "100", // Request more data points for better visualization
+    })
+
+    try {
+      const res = await fetch(`${API_QUERY_URL}?${params}`, {
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        throw new Error(`API ${res.status}: ${await res.text()}`)
+      }
+
+      const json = await res.json()
+      const data = Array.isArray(json) ? json : []
+      setApiData(data)
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message)
+      setApiData([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Set up auto-refresh for map data
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    fetchLatestData()
+
+    let interval: ReturnType<typeof setInterval>
+    if (autoRefresh) {
+      interval = setInterval(fetchLatestData, refreshIntervalSec * 1000)
+    }
+
     return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [auth.isAuthenticated, auth.user, autoRefresh, refreshIntervalSec]);
+      if (interval) clearInterval(interval)
+    }
+  }, [isAuthenticated, autoRefresh, refreshIntervalSec])
 
   // Update date range based on selected timeRange
   useEffect(() => {
     if (timeRange !== "custom") {
-      const now = new Date();
-      let newStart: Date | null = null;
+      const now = new Date()
+      let newStart: Date | null = null
+
       switch (timeRange) {
         case "24hr":
-          newStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
+          newStart = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          break
         case "7d":
-          newStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
+          newStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          break
         case "1m":
-          newStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          break;
+          newStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+          break
         case "1y":
-          newStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-          break;
+          newStart = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+          break
         case "all":
         default:
-          newStart = null;
+          newStart = new Date(2020, 0, 1) // Some reasonable default for "all"
       }
-      setStartDate(newStart);
-      setEndDate(now);
-    }
-  }, [timeRange]);
 
-  // Filter data
+      setStartDate(newStart)
+      setEndDate(now)
+    }
+  }, [timeRange])
+
+  // Filter data based on selected devices
   useEffect(() => {
-    let filtered = data;
+    let filtered = apiData
+
     if (!selectedDevices.includes("all")) {
-      filtered = filtered.filter((item) => selectedDevices.includes(item.deviceID));
+      filtered = filtered.filter((item) => selectedDevices.includes(item.deviceID))
     }
-    if (startDate) {
-      filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) >= startDate!);
-    }
-    if (endDate) {
-      filtered = filtered.filter((item) => new Date(Number(item.timestamp) * 1000) <= endDate!);
-    }
-    setFilteredData(filtered);
-  }, [data, selectedDevices, startDate, endDate]);
 
-  // Update chart data
+    setFilteredData(filtered)
+  }, [apiData, selectedDevices])
+
+  // Get unique device IDs from the data
+  const uniqueDevices = Array.from(new Set(apiData.map((item) => item.deviceID)))
+
+  // Fetch historical data when auth is ready and time range is set
   useEffect(() => {
-    if (filteredData.length === 0) {
-      setChartData({ labels: [], datasets: [] });
-      return;
+    if (isAuthenticated && startDate && endDate) {
+      fetchHistoricalData()
     }
-    const sorted = [...filteredData].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
-    const labels = sorted.map((item) =>
-      new Date(Number(item.timestamp) * 1000).toLocaleString()
-    );
-    const datasets = chartFields.map((field) => ({
-      label: `${field} over time`,
-      data: sorted.map((item) => Number((item as Record<string, any>)[field])),
-      fill: false,
-      borderColor: "rgb(75, 192, 192)",
-      tension: 0.1,
-    }));
-    setChartData({ labels, datasets });
-  }, [filteredData, chartFields]);
+  }, [isAuthenticated, startDate, endDate])
 
-  const uniqueDevices = ["all", ...new Set(data.map((item) => item.deviceID))];
-
-
-  
-  
-  const handleAddParam = () => {
-    if (params.length < 10) {
-      setParams([...params, { key: "", value: "" }]);
-    }
-  };
-
-  const handleParamChange = (index: number, field: "key" | "value", value: string) => {
-    const newParams = [...params];
-    newParams[index][field] = value;
-    setParams(newParams);
-  };
-
-  const handleRemoveParam = (index: number) => {
-    const newParams = [...params];
-    newParams.splice(index, 1);
-    setParams(newParams);
-  };
-
-  const handleCommandSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setCommandLoading(true);
-    setCommandSuccess("");
-    setError("");
-
-    const paramsObj: Record<string, string> = {};
-    params.forEach((p) => {
-      if (p.key) paramsObj[p.key] = p.value;
-    });
-
-    const payload = {
-      command,
-      params: paramsObj,
-    };
-    const atoken = auth.user?.access_token;
-    const aidtoken = auth.user?.id_token;
-    
-    
-    console.log("Using acctoken:", atoken?.substring(0, 999) + "...");
-    console.log("Using aIDtoken:", aidtoken?.substring(0, 999) + "...");
-    
-
-    fetch(API_COMMAND_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    
-    
-      .then(async (res) => {
-        const text = await res.text();
-        try {
-          JSON.parse(text);
-          setCommandSuccess("Command sent successfully");
-        } catch {
-          setCommandSuccess("Command sent (non-JSON response)");
-        }
-        setCommand("");
-        setParams([]);
-        setCommandLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to send command");
-        setCommandLoading(false);
-      });
-  };
-
-  const downloadCSV = () => {
-    if (data.length === 0) return;
-    const headers = Object.keys(data[0]);
-    const csvRows = [headers.join(",")];
-    data.forEach((item) => {
-      const values = headers.map((header) => `${(item as Record<string, any>)[header]}`);
-      csvRows.push(values.join(","));
-    });
-    const csvData = csvRows.join("\n");
-    const blob = new Blob([csvData], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.setAttribute("hidden", "");
-    a.setAttribute("href", url);
-    a.setAttribute("download", "esp_data.csv");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const filteredApiData = apiData.filter((item) => {
-    const ts = new Date(item.timestamp)
-    if (startDate && ts < startDate) return false
-    if (endDate   && ts > endDate)   return false
-    if (!selectedDevices.includes("all") &&
-        !selectedDevices.includes(item.deviceID)
-    ) return false
-    return true
-  })
+  // Show loading state if auth is still loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+        <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <p className="mt-4 text-gray-700">Loading Telematics Hub...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <main className="min-h-screen p-4 bg-[var(--background)]">
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={signOutRedirect}
-          className="bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg cursor-pointer px-4 py-2 rounded"
-        >
-          Logout
-        </button>
-      </div>
-      <div className="max-w-[90vw] mx-auto">
-        <h1 className="text-4xl font-semibold text-center mb-6 tracking-tight">
-        <span className="text-white">
-          EV Telematics Hub
-        </span>
-        </h1>
-        <div className="p-4">
-          <h1 className="text-sm text-white mb-6 text-center">V1.05: Secure, injection, sourcing, mapping, graphing</h1>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Telematics Dashboard</h1>
+          <div className="text-sm text-gray-500">Last updated: {new Date().toLocaleString()}</div>
         </div>
 
-        <div className="p-4">
-          {/* <DataChart1 token={auth.user?.access_token as string} /> */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Filters Column */}
+          <div className="lg:col-span-1 space-y-4">
+            <TimeRangeSelector
+              timeRange={timeRange}
+              setTimeRange={setTimeRange}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+            />
 
-         
-<div className="p-4 bg-[var(--background)] shadow-md rounded cursor-pointer mb-4">
-  {/* Time Range */}
-  <div className="flex flex-wrap gap-2 mb-4">
-    {timeRanges.map((r) => (
-      <button
-        key={r.value}
-        onClick={() => setTimeRange(r.value)}
-        className={`px-4 py-2 rounded text-sm cursor-pointer ${
-          timeRange === r.value
-            ? "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700"
-            : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
-        }`}
-      >
-        {r.label}
-      </button>
-    ))}
-  </div>
-  {/* Custom Pickers */}
-  {timeRange === "custom" && (
-    <div className="flex gap-4 mb-4">
-      <DatePicker
-        selected={startDate}
-        onChange={(d) => { setStartDate(d); setTimeRange("custom"); }}
-        selectsStart startDate={startDate} endDate={endDate}
-        showTimeSelect dateFormat="Pp" placeholderText="Start Date"
-      />
-      <DatePicker
-        selected={endDate}
-        onChange={(d) => { setEndDate(d); setTimeRange("custom"); }}
-        selectsEnd startDate={startDate} endDate={endDate}
-        minDate={startDate || undefined}
-        showTimeSelect dateFormat="Pp" placeholderText="End Date"
-      />
-      <button
-        onClick={() => { setStartDate(null); setEndDate(null); setTimeRange("all"); }}
-        className="px-4 py-2 rounded cursor-pointer bg-gray-600 text-white hover:bg-gray-700 shadow-md hover:shadow-lg"
-      >
-        Clear
-      </button>
-    </div>
-  )}
-  {/* Device Filter */}
-  <div className="flex flex-wrap gap-2 mb-4">
-    {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
-      <button
-        key={dev}
-        onClick={() => {
-          setSelectedDevices((prev) => {
-            if (dev === "all") return ["all"];
-            const next = prev.includes(dev)
-              ? prev.filter((d) => d !== dev)
-              : [...prev.filter((d) => d !== "all"), dev];
-            return next.length ? next : ["all"];
-          });
-        }}
-        className={`px-3 py-1 rounded cursor-pointer text-sm ${
-          selectedDevices.includes(dev)
-            ? "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700"
-            : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
-        }`}
-      >
-        {dev}
-      </button>
-    ))}
-  </div>
-  {/* Field Selector */}
-  <div className="flex flex-wrap gap-2">
-    {allFields.map((f) => (
-      <button
-        key={f}
-        onClick={() =>
-          setChartFields((cf) =>
-            cf.includes(f) ? cf.filter((x) => x !== f) : [...cf, f]
-          )
-        }
-        className={`px-3 py-1 rounded cursor-pointer text-sm ${
-          chartFields.includes(f)
-            ? "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700"
-            : "bg-gray-200 text-black shadow-md hover:shadow-lg hover:bg-gray-300"
-        }`}
-      >
-        {f}
-      </button>
-    ))}
-  </div>
-</div>
+            <DeviceSelector
+              devices={uniqueDevices}
+              selectedDevices={selectedDevices}
+              setSelectedDevices={setSelectedDevices}
+            />
 
-        <DataChart1 data={filteredApiData} chartFields={chartFields} loading={loading} />
+            <FieldSelector fields={allFields} selectedFields={chartFields} setSelectedFields={setChartFields} />
+          </div>
 
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Chart Section */}
+            <section>
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Telemetry Data</h2>
+              <DataChart1 data={filteredData} chartFields={chartFields} loading={loading} />
+              {error && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="text-red-800 text-sm">{error}</p>
+                </div>
+              )}
+            </section>
 
-        </div>
-        <section className="bg-[var(--background)] shadow-md rounded cursor-pointer p-4">
-          <h2 className="text-2xl font-semibold mb-4">Send Command to ESP</h2>
-          <form onSubmit={handleCommandSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Command</label>
-              <input
-                type="text"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                placeholder="Enter command (e.g., turn_on)"
-                className="w-full p-2 border rounded cursor-pointer"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Parameters</label>
-              {params.map((param, index) => (
-                <div key={index} className="flex space-x-2 mb-2">
-                  <input
-                    type="text"
-                    value={param.key}
-                    onChange={(e) => handleParamChange(index, "key", e.target.value)}
-                    placeholder="Key"
-                    className="w-1/2 p-2 border rounded cursor-pointer"
-                    required
-                  />
-                  <input
-                    type="text"
-                    value={param.value}
-                    onChange={(e) => handleParamChange(index, "value", e.target.value)}
-                    placeholder="Value"
-                    className="w-1/2 p-2 border rounded cursor-pointer"
-                    required
-                  />
+            {/* Map Section */}
+            <section>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-xl font-semibold text-gray-800">Vehicle Locations</h2>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoRefresh}
+                      onChange={(e) => setAutoRefresh(e.target.checked)}
+                      className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Auto refresh</span>
+                  </label>
+
+                  {autoRefresh && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={refreshIntervalSec}
+                        min={5}
+                        onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
+                        className="w-16 p-1 border border-gray-300 rounded text-sm"
+                      />
+                      <span className="text-sm text-gray-700">sec</span>
+                    </div>
+                  )}
+
                   <button
-                    type="button"
-                    onClick={() => handleRemoveParam(index)}
-                    className="px-2 py-1 bg-red-500 text-white rounded cursor-pointer shadow-md hover:shadow-lg hover:bg-red-600"
+                    onClick={fetchLatestData}
+                    disabled={refreshing}
+                    className="flex items-center px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm text-gray-800 transition-colors"
                   >
-                    Remove
+                    {refreshing ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                    )}
+                    Refresh
                   </button>
                 </div>
-              ))}
-              {params.length < 10 && (
-                <button
-                  type="button"
-                  onClick={handleAddParam}
-                  className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-300 shadow-md hover:shadow-lg rounded cursor-pointer"
-                >
-                  Add Parameter
-                </button>
-              )}
-            </div>
-            <div>
-              <button
-                type="submit"
-                disabled={commandLoading}
-                className="px-4 py-2 text-sm bg-white text-black border border-gray-400 hover:bg-gray-300 shadow-md hover:shadow-lg rounded cursor-pointer"
-              >
-                {commandLoading ? "Sending..." : "Send Command"}
-              </button>
-            </div>
-            {commandSuccess && <p className="mt-2 text-green-600">{commandSuccess}</p>}
-            {error && <p className="mt-2 text-red-600">{error}</p>}
-          </form>
-        </section>
-        <section className="p-4">
-          <h1 className="text-2xl mb-4">Vehicle Map</h1>
-          <div className="flex items-center gap-4 mb-4">
-            <label className="flex items-center cursor-pointer text-white">
-              <span className="mr-2">Auto Refresh</span>
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={e => setAutoRefresh(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-600 cursor-pointer"
-              />
-            </label>
-            {autoRefresh && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={refreshIntervalSec}
-                  min={1}
-                  onChange={e => setRefreshIntervalSec(Number(e.target.value))}
-                  className="w-16 p-1 border rounded cursor-pointer"
-                />
-                <span className="text-white">sec</span>
               </div>
-            )}
-            <button
-              onClick={fetchLatestData}
-              className="px-4 py-2 bg-white text-black border border-gray-400 hover:bg-gray-300 shadow-md hover:shadow-lg rounded cursor-pointer"
-            >
-              Refresh Now
-            </button>
+
+              <VehicleMap devices={latestData} centerOnDevices={true} />
+            </section>
+
+            {/* Command Interface */}
+            <section>
+              <CommandInterface />
+            </section>
           </div>
-          {latestData.length === 0 ? (
-            <div className="text-center text-white">Loading latest locations...</div>
-          ) : (
-            <VehicleMap devices={latestData} />
-          )}
-        </section>
-        
-        
+        </div>
       </div>
-    </main>
-  );
+    </DashboardLayout>
+  )
 }

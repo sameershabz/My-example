@@ -34,4 +34,3 @@ export interface DeviceData {
       soc: 66,
     },
   ];
-  
