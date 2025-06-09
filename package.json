@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "latest",
     "autoprefixer": "^10.4.16",
     "chart.js": "latest",
