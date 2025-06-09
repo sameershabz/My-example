@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Define CSS variables for theming */
+/* Base theme variables */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -26,7 +26,6 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
   }
-
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -49,7 +48,6 @@
     --ring: 212.7 26.8% 83.9%;
   }
 
-  /* Apply base styles using raw CSS */
   body {
     background-color: hsl(var(--background));
     color:             hsl(var(--foreground));
@@ -58,11 +56,12 @@
 }
 
 @layer components {
-  /* Button styles */
+  /* Button */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium
+    @apply inline-flex items-center justify-center text-sm font-medium
            transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
            disabled:opacity-50 disabled:pointer-events-none;
+    padding: 0.5rem 1rem;
     border-radius: var(--radius);
   }
   .btn-primary {
@@ -75,11 +74,11 @@
     @apply bg-red-600 text-white hover:bg-red-700;
   }
 
-  /* Card styles */
+  /* Card */
   .card {
     border: 1px solid hsl(var(--border));
     background-color: hsl(var(--card));
-    color: hsl(var(--card-foreground));
+    color:            hsl(var(--card-foreground));
     @apply rounded-lg shadow-sm;
   }
   .card-header   { @apply flex flex-col space-y-1.5 p-6; }
@@ -88,14 +87,14 @@
   .card-content  { @apply p-6 pt-0; }
   .card-footer   { @apply flex items-center p-6 pt-0; }
 
-  /* Leaflet map container */
+  /* Map container */
   .leaflet-container {
     height: 100%;
     width: 100%;
     z-index: 1;
   }
 
-  /* Loading spinner */
+  /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .animate-spin { animation: spin 1s linear infinite; }
   .spinner {
@@ -115,20 +114,26 @@
     background-color: hsl(var(--foreground));
   }
 
-  /* React DatePicker styles */
+  /* DatePicker */
   .react-datepicker-wrapper {
     @apply w-full;
   }
   .react-datepicker__input-container input {
-    @apply w-full px-3 py-2 border transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+    padding: 0.5rem 1rem;
+    border: 1px solid hsl(var(--input));
     border-radius: var(--radius);
     background-color: white;
     color: black;
     outline: none;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  .react-datepicker__input-container input:focus {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    border-color: #3b82f6;
   }
   .dark .react-datepicker__input-container input {
     background-color: hsl(var(--card));
-    color: hsl(var(--card-foreground));
-    border-color: hsl(var(--input));
+    color:            hsl(var(--card-foreground));
+    border-color:     hsl(var(--input));
   }
 }
