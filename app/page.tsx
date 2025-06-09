@@ -104,7 +104,7 @@ export default function Home() {
   // Use the same sign-out function as in Dashboard:
   const signOutRedirect = () => {
     const clientId = "79ufsa70isosab15kpcmlm628d";
-    const logoutUri = "https://telematicshub.vercel.app/logout-callback";
+    const logoutUri = "https://v0-my-site-tau.vercel.app/logout-callback";
     const cognitoDomain = "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com";
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
