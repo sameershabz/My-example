@@ -15,7 +15,7 @@ export const config = {
   api: {
     query: "/api/query",
     command: "/api/command",
-    gnssTime: "/api/GNSSTime",
+    gnssTime: "/api/gnsstime",
     saveRefreshToken: "/api/save-refresh-token",
     revokeToken: "/api/revoke-token",
   },

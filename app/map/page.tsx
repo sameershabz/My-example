@@ -57,7 +57,7 @@ export default function MapPage() {
       setLoading(true)
       setError("")
 
-      const response = await fetch("/api/GNSSTime", {
+      const response = await fetch("/api/gnsstime", {
         credentials: "include",
       })
 
