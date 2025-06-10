@@ -1,14 +1,17 @@
+// Get site URL from environment or use default
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://v0-my-site-tau.vercel.app"
+
 // Centralized configuration for URLs and environment settings
 export const config = {
   // Base URLs
-  baseUrl: "https://mymasterssite.vercel.app",
+  baseUrl: SITE_URL,
 
   // Authentication URLs
   auth: {
-    redirectUri: "https://mymasterssite.vercel.app",
-    logoutUri: "https://mymasterssite.vercel.app/logout-callback",
-    cognitoDomain: "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com",
-    clientId: "79ufsa70isosab15kpcmlm628d",
+    redirectUri: SITE_URL,
+    logoutUri: `${SITE_URL}/logout-callback`,
+    cognitoDomain: process.env.NEXT_PUBLIC_COGNITO_DOMAIN || "us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com",
+    clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "79ufsa70isosab15kpcmlm628d",
   },
 
   // API endpoints
