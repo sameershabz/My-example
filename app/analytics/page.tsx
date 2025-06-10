@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "react-oidc-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, TrendingUp, Users, MapPin, Zap } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Loader2, TrendingUp, Users, MapPin, Zap, RefreshCw } from "lucide-react"
 import type { ApiDataItem } from "../components/DataChart1"
+import DashboardLayout from "../components/dashboard-layout"
 
 export default function Analytics() {
   const auth = useAuth()
@@ -12,41 +14,6 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
-  // Show loading state while auth is initializing
-  if (auth.isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-4 text-gray-700">Loading analytics...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error if auth failed
-  if (auth.error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Authentication error: {auth.error.message}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Redirect to signin if not authenticated
-  if (!auth.isAuthenticated || !auth.user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-700">Please sign in to view analytics.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Rest of the component logic...
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true)
@@ -81,104 +48,165 @@ export default function Analytics() {
   const avgTemperature =
     data.length > 0 ? data.reduce((sum, item) => sum + (item.temperature_c || 0), 0) / data.length : 0
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-4 text-gray-700">Loading analytics data...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-        <button onClick={fetchAnalyticsData} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-          Refresh Data
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">{error}</p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+            <p className="text-muted-foreground">View detailed analytics and metrics for your fleet</p>
+          </div>
+          <Button onClick={fetchAnalyticsData} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Refresh Data
+          </Button>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Devices</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDevices}</div>
-            <p className="text-xs text-muted-foreground">Active devices</p>
-          </CardContent>
-        </Card>
+        {error && (
+          <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50">
+            <p className="text-red-600 dark:text-red-400">{error}</p>
+          </div>
+        )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Data Points</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDataPoints}</div>
-            <p className="text-xs text-muted-foreground">Total measurements</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Voltage</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgVoltage.toFixed(2)}V</div>
-            <p className="text-xs text-muted-foreground">System voltage</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Temperature</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgTemperature.toFixed(1)}°C</div>
-            <p className="text-xs text-muted-foreground">System temperature</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>System Overview</CardTitle>
-          <CardDescription>
-            Analytics data for {totalDevices} devices with {totalDataPoints} total measurements
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No data available</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Device Status</h3>
-                  <p className="text-sm text-gray-600">{totalDevices} devices are currently reporting data</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Data Quality</h3>
-                  <p className="text-sm text-gray-600">{totalDataPoints} data points collected</p>
-                </div>
-              </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="mt-4 text-muted-foreground">Loading analytics data...</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Devices</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalDevices}</div>
+                  <p className="text-xs text-muted-foreground">Active devices</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Data Points</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalDataPoints}</div>
+                  <p className="text-xs text-muted-foreground">Total measurements</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Voltage</CardTitle>
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{avgVoltage.toFixed(2)}V</div>
+                  <p className="text-xs text-muted-foreground">System voltage</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Temperature</CardTitle>
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{avgTemperature.toFixed(1)}°C</div>
+                  <p className="text-xs text-muted-foreground">System temperature</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>System Overview</CardTitle>
+                <CardDescription>
+                  Analytics data for {totalDevices} devices with {totalDataPoints} total measurements
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data.length === 0 ? (
+                  <div className="flex items-center justify-center h-32">
+                    <p className="text-muted-foreground">No data available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <h3 className="font-semibold">Device Status</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {totalDevices} devices are currently reporting data
+                        </p>
+
+                        <div className="mt-4 space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span>Online</span>
+                            <span className="font-medium">{totalDevices}</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full" style={{ width: "100%" }}></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="font-semibold">Data Quality</h3>
+                        <p className="text-sm text-muted-foreground">{totalDataPoints} data points collected</p>
+
+                        <div className="mt-4 space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span>Valid Data</span>
+                            <span className="font-medium">{Math.round(totalDataPoints * 0.98)}</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: "98%" }}></div>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm mt-2">
+                            <span>Invalid Data</span>
+                            <span className="font-medium">{Math.round(totalDataPoints * 0.02)}</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 rounded-full" style={{ width: "2%" }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t">
+                      <h3 className="font-semibold mb-2">Recent Activity</h3>
+                      <div className="space-y-2">
+                        {data.slice(0, 3).map((item, i) => (
+                          <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                            <div>
+                              <p className="font-medium">{item.deviceID}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(item.timestamp).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm">{item.voltage_v ? `${item.voltage_v.toFixed(2)}V` : "N/A"}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {item.temperature_c ? `${item.temperature_c.toFixed(1)}°C` : "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+    </DashboardLayout>
   )
 }

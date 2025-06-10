@@ -1,13 +1,15 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useAuth } from "react-oidc-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Send, Plus, Trash2 } from "lucide-react"
+import { Loader2, Send, Plus, Trash } from "lucide-react"
+import DashboardLayout from "../components/dashboard-layout"
 
 type ParamItem = {
   key: string
@@ -22,41 +24,6 @@ export default function Commands() {
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
-  // Show loading state while auth is initializing
-  if (auth.isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-4 text-gray-700">Loading commands...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error if auth failed
-  if (auth.error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Authentication error: {auth.error.message}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Redirect to signin if not authenticated
-  if (!auth.isAuthenticated || !auth.user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-700">Please sign in to access commands.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Rest of component logic...
   const handleAddParam = () => {
     if (params.length < 10) {
       setParams([...params, { key: "", value: "" }])
@@ -114,78 +81,155 @@ export default function Commands() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Command Center</h1>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
+          <p className="text-muted-foreground">Send commands and parameters to your connected devices</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Send Command to Devices</CardTitle>
-          <CardDescription>Send commands and parameters to your connected devices</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="command">Command</Label>
-              <Input
-                id="command"
-                type="text"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                placeholder="Enter command (e.g., turn_on, restart)"
-                required
-              />
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Send Command</CardTitle>
+            <CardDescription>Configure and send commands to your fleet</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="command">Command</Label>
+                <Input
+                  id="command"
+                  type="text"
+                  value={command}
+                  onChange={(e) => setCommand(e.target.value)}
+                  placeholder="Enter command (e.g., turn_on, restart)"
+                  required
+                />
+              </div>
 
-            <div>
-              <Label>Parameters</Label>
-              {params.map((param, index) => (
-                <div key={index} className="flex space-x-2 mb-2">
-                  <Input
-                    type="text"
-                    value={param.key}
-                    onChange={(e) => handleParamChange(index, "key", e.target.value)}
-                    placeholder="Key"
-                    className="flex-1"
-                  />
-                  <Input
-                    type="text"
-                    value={param.value}
-                    onChange={(e) => handleParamChange(index, "value", e.target.value)}
-                    placeholder="Value"
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => handleRemoveParam(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Parameters</Label>
+                  {params.length < 10 && (
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddParam}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Parameter
+                    </Button>
+                  )}
                 </div>
-              ))}
-              {params.length < 10 && (
-                <Button type="button" variant="outline" onClick={handleAddParam} className="mt-2">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Parameter
+
+                {params.length > 0 ? (
+                  <div className="space-y-3 border rounded-md p-4">
+                    {params.map((param, index) => (
+                      <div key={index} className="flex items-center space-x-3">
+                        <Input
+                          type="text"
+                          value={param.key}
+                          onChange={(e) => handleParamChange(index, "key", e.target.value)}
+                          placeholder="Key"
+                          className="flex-1"
+                          required
+                        />
+                        <Input
+                          type="text"
+                          value={param.value}
+                          onChange={(e) => handleParamChange(index, "value", e.target.value)}
+                          placeholder="Value"
+                          className="flex-1"
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveParam(index)}
+                          className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center p-6 border border-dashed rounded-md">
+                    <p className="text-sm text-muted-foreground">No parameters added yet.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddParam} className="mt-2">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Parameter
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col space-y-4">
+                <Button type="submit" disabled={loading || !command} className="w-full sm:w-auto">
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Command
+                    </>
+                  )}
                 </Button>
-              )}
+
+                {success && (
+                  <div className="p-4 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50">
+                    <p className="text-green-600 dark:text-green-400">{success}</p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50">
+                    <p className="text-red-600 dark:text-red-400">{error}</p>
+                  </div>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Command History</CardTitle>
+            <CardDescription>Recent commands sent to your devices</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <div className="grid grid-cols-4 p-3 border-b bg-muted/50">
+                <div className="font-medium">Command</div>
+                <div className="font-medium">Parameters</div>
+                <div className="font-medium">Status</div>
+                <div className="font-medium">Timestamp</div>
+              </div>
+              <div className="divide-y">
+                {/* Sample command history - this would be populated from actual data */}
+                <div className="grid grid-cols-4 p-3">
+                  <div>restart</div>
+                  <div className="text-sm text-muted-foreground">device: "esp32-01"</div>
+                  <div className="text-green-500">Success</div>
+                  <div className="text-sm text-muted-foreground">{new Date().toLocaleString()}</div>
+                </div>
+                <div className="grid grid-cols-4 p-3">
+                  <div>set_mode</div>
+                  <div className="text-sm text-muted-foreground">mode: "eco", duration: "60"</div>
+                  <div className="text-green-500">Success</div>
+                  <div className="text-sm text-muted-foreground">{new Date(Date.now() - 3600000).toLocaleString()}</div>
+                </div>
+                <div className="grid grid-cols-4 p-3">
+                  <div>update_config</div>
+                  <div className="text-sm text-muted-foreground">interval: "30", power: "low"</div>
+                  <div className="text-red-500">Failed</div>
+                  <div className="text-sm text-muted-foreground">{new Date(Date.now() - 7200000).toLocaleString()}</div>
+                </div>
+              </div>
             </div>
-
-            <Button type="submit" disabled={loading || !command}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              {loading ? "Sending..." : "Send Command"}
-            </Button>
-
-            {success && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-600">{success}</p>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600">{error}</p>
-              </div>
-            )}
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   )
 }
