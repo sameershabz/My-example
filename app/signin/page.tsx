@@ -38,7 +38,11 @@ export default function SignIn() {
               <p className="text-red-600 dark:text-red-400 text-center">{auth.error.message}</p>
             </div>
           ) : (
-            <Button onClick={handleSignIn} className="w-full" size="lg">
+            <Button
+              onClick={handleSignIn}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              size="lg"
+            >
               Sign In
             </Button>
           )}
