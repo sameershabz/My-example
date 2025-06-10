@@ -82,7 +82,7 @@ export default function Home() {
   const [latestData, setLatestData] = useState<DeviceData[]>([])
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(5)
-
+// nothing to see here
   const fetchLatestData = () => {
     fetch(config.api.gnssTime, { credentials: "include" })
       .then(async (res) => {
