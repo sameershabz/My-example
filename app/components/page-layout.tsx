@@ -1,13 +1,12 @@
 "use client"
 
-import type React from "react"
+import type { ReactNode } from "react"
 import { useAuth } from "react-oidc-context"
 import { Loader2 } from "lucide-react"
 import { getLogoutUrl } from "@/lib/config"
-import { Button } from "@/components/ui/button"
 
 interface PageLayoutProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export default function PageLayout({ children }: PageLayoutProps) {
@@ -53,21 +52,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex flex-col min-h-screen">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-14 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">Telematics Hub</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Logout
-              </Button>
-            </div>
-          </div>
-        </header>
-        <main className="flex-1 container py-6">{children}</main>
-      </div>
+      <div className="container mx-auto px-4 py-6">{children}</div>
     </div>
   )
 }

@@ -12,7 +12,6 @@ import { CalendarIcon, RefreshCw, Plus, Trash, Loader2, Send } from "lucide-reac
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import DataChart1 from "./components/DataChart1"
 import dynamic from "next/dynamic"
@@ -34,7 +33,14 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-const VehicleMap = dynamic(() => import("./components/VehicleMap"), { ssr: false })
+const VehicleMap = dynamic(() => import("./components/VehicleMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-[500px]">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  ),
+})
 
 type ParamItem = {
   key: string
@@ -51,28 +57,20 @@ const timeRanges: { label: string; value: TimeRange }[] = [
   { label: "Custom", value: "custom" },
 ]
 
-const allFields = [
-  "quality_min",
-  "quality_avg",
-  "lat",
-  "lon",
-  "alt_m",
-  "speed_kmh",
-  "heading_deg",
-  "voltage_v",
-  "min",
-  "avg",
-  "max",
-  "temperature_c",
-  "signal_strength_dbm",
-  "speed",
-  "accel_x",
-  "accel_y",
-  "accel_z",
-  "power_kw",
-]
+// Group fields by category - only show one category at a time
+const fieldCategories = {
+  voltage: ["voltage_v"],
+  temperature: ["temperature_c"],
+  speed: ["speed", "speed_kmh"],
+  position: ["lat", "lon", "alt_m", "heading_deg"],
+  quality: ["quality_min", "quality_avg"],
+  current: ["min", "avg", "max"],
+  signal: ["signal_strength_dbm"],
+  acceleration: ["accel_x", "accel_y", "accel_z"],
+  power: ["power_kw"],
+}
 
-// Predefined command templates
+// Updated command templates
 const commandTemplates = [
   {
     name: "Set WiFi Credentials",
@@ -83,19 +81,32 @@ const commandTemplates = [
     ],
   },
   {
-    name: "Deactivate Device",
-    command: "deactivate",
-    params: [
-      { key: "device_id", value: "" },
-      { key: "reason", value: "maintenance" },
-    ],
+    name: "Kill Device",
+    command: "kill_device",
+    params: [{ key: "device_id", value: "" }],
   },
   {
     name: "Set Current Sensor",
-    command: "set_sensor",
+    command: "set_current_sensor",
     params: [
       { key: "type", value: "fluxgate" }, // or "clip-on"
-      { key: "calibration", value: "auto" },
+      { key: "range", value: "1x" }, // 1x, 2x, or 4x
+    ],
+  },
+  {
+    name: "Set Voltage Sensor Range",
+    command: "set_voltage_range",
+    params: [
+      { key: "range", value: "1x" }, // 1x, 2x, or 4x
+    ],
+  },
+  {
+    name: "Configure LTE",
+    command: "set_lte_config",
+    params: [
+      { key: "apn", value: "" },
+      { key: "username", value: "" },
+      { key: "password", value: "" },
     ],
   },
 ]
@@ -122,21 +133,8 @@ export default function Home() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(5)
 
-  // New state for field category selection
-  const [fieldCategory, setFieldCategory] = useState<string>("voltage")
-
-  // Group fields by category
-  const fieldCategories = {
-    voltage: ["voltage_v"],
-    temperature: ["temperature_c"],
-    speed: ["speed", "speed_kmh"],
-    position: ["lat", "lon", "alt_m", "heading_deg"],
-    quality: ["quality_min", "quality_avg"],
-    current: ["min", "avg", "max"],
-    signal: ["signal_strength_dbm"],
-    acceleration: ["accel_x", "accel_y", "accel_z"],
-    power: ["power_kw"],
-  }
+  // Control which category is shown
+  const [activeCategory, setActiveCategory] = useState<string>("voltage")
 
   const fetchLatestData = () => {
     fetch(config.api.gnssTime, { credentials: "include" })
@@ -267,8 +265,6 @@ export default function Home() {
     setChartData({ labels, datasets })
   }, [filteredData, chartFields])
 
-  const uniqueDevices = ["all", ...new Set(data.map((item) => item.deviceID))]
-
   const handleAddParam = () => {
     if (params.length < 10) {
       setParams([...params, { key: "", value: "" }])
@@ -341,7 +337,7 @@ export default function Home() {
   })
 
   // Get current category fields
-  const currentCategoryFields = fieldCategories[fieldCategory as keyof typeof fieldCategories] || []
+  const currentCategoryFields = fieldCategories[activeCategory as keyof typeof fieldCategories] || []
 
   return (
     <PageLayout>
@@ -352,19 +348,22 @@ export default function Home() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-muted text-muted-foreground">
+          <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-lg">
             <TabsTrigger
               value="chart"
-              className="data-[state=active]:bg-background data-[state=active]:text-foreground"
+              className="rounded-md px-3 py-2 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
             >
               Chart View
             </TabsTrigger>
-            <TabsTrigger value="map" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+            <TabsTrigger
+              value="map"
+              className="rounded-md px-3 py-2 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
               Map View
             </TabsTrigger>
             <TabsTrigger
               value="commands"
-              className="data-[state=active]:bg-background data-[state=active]:text-foreground"
+              className="rounded-md px-3 py-2 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
             >
               Commands
             </TabsTrigger>
@@ -372,15 +371,15 @@ export default function Home() {
 
           {/* Chart View Tab */}
           <TabsContent value="chart" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Visualization</CardTitle>
+            <Card className="shadow-lg border-0 bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">Data Visualization</CardTitle>
                 <CardDescription>View and analyze telemetry data from your devices</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* Time Range Selector */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Time Range</h3>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Time Range</h3>
                   <div className="flex flex-wrap gap-2">
                     {timeRanges.map((r) => (
                       <Button
@@ -388,7 +387,14 @@ export default function Home() {
                         variant={timeRange === r.value ? "default" : "outline"}
                         size="sm"
                         onClick={() => setTimeRange(r.value)}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 data-[state=active]:bg-primary/90"
+                        className={`
+                          transition-all duration-200 font-medium
+                          ${
+                            timeRange === r.value
+                              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                              : "bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
+                          }
+                        `}
                       >
                         {r.label}
                       </Button>
@@ -398,43 +404,49 @@ export default function Home() {
 
                 {/* Custom Date Range */}
                 {timeRange === "custom" && (
-                  <div className="flex flex-wrap gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Start Date</label>
+                      <Label className="text-sm font-medium">Start Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal bg-background border-border hover:bg-muted"
+                          >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-background border">
+                        <PopoverContent className="w-auto p-0 bg-background border-border shadow-lg" align="start">
                           <Calendar
                             mode="single"
                             selected={startDate || undefined}
                             onSelect={setStartDate}
                             initialFocus
-                            className="bg-background text-foreground"
+                            className="bg-background text-foreground border-0"
                           />
                         </PopoverContent>
                       </Popover>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">End Date</label>
+                      <Label className="text-sm font-medium">End Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal bg-background border-border hover:bg-muted"
+                          >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-background border">
+                        <PopoverContent className="w-auto p-0 bg-background border-border shadow-lg" align="start">
                           <Calendar
                             mode="single"
                             selected={endDate || undefined}
                             onSelect={setEndDate}
                             initialFocus
-                            className="bg-background text-foreground"
+                            className="bg-background text-foreground border-0"
                           />
                         </PopoverContent>
                       </Popover>
@@ -443,8 +455,8 @@ export default function Home() {
                 )}
 
                 {/* Device Filter */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Device Filter</h3>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Device Filter</h3>
                   <div className="flex flex-wrap gap-2">
                     {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
                       <Button
@@ -460,7 +472,14 @@ export default function Home() {
                             return next.length ? next : ["all"]
                           })
                         }}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 data-[state=active]:bg-primary/90"
+                        className={`
+                          transition-all duration-200 font-medium
+                          ${
+                            selectedDevices.includes(dev)
+                              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                              : "bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
+                          }
+                        `}
                       >
                         {dev}
                       </Button>
@@ -468,30 +487,36 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Field Category Selector */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Data Field Category</h3>
-                  <Select value={fieldCategory} onValueChange={setFieldCategory}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="voltage">Voltage</SelectItem>
-                      <SelectItem value="temperature">Temperature</SelectItem>
-                      <SelectItem value="speed">Speed</SelectItem>
-                      <SelectItem value="position">Position</SelectItem>
-                      <SelectItem value="quality">Quality</SelectItem>
-                      <SelectItem value="current">Current</SelectItem>
-                      <SelectItem value="signal">Signal</SelectItem>
-                      <SelectItem value="acceleration">Acceleration</SelectItem>
-                      <SelectItem value="power">Power</SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Category Selector */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Data Category</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.keys(fieldCategories).map((category) => (
+                      <Button
+                        key={category}
+                        variant={activeCategory === category ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setActiveCategory(category)}
+                        className={`
+                          transition-all duration-200 font-medium capitalize
+                          ${
+                            activeCategory === category
+                              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                              : "bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
+                          }
+                        `}
+                      >
+                        {category}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Field Selector for Current Category */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Data Fields</h3>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} Fields
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {currentCategoryFields.map((f) => (
                       <Button
@@ -501,7 +526,14 @@ export default function Home() {
                         onClick={() =>
                           setChartFields((cf) => (cf.includes(f) ? cf.filter((x) => x !== f) : [...cf, f]))
                         }
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 data-[state=active]:bg-primary/90"
+                        className={`
+                          transition-all duration-200 font-medium
+                          ${
+                            chartFields.includes(f)
+                              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                              : "bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
+                          }
+                        `}
                       >
                         {f}
                       </Button>
@@ -519,16 +551,18 @@ export default function Home() {
 
           {/* Map View Tab */}
           <TabsContent value="map" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <Card className="shadow-lg border-0 bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
-                  <CardTitle>Vehicle Locations</CardTitle>
+                  <CardTitle className="text-xl">Vehicle Locations</CardTitle>
                   <CardDescription>Real-time positions of {latestData.length} vehicles</CardDescription>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <Switch id="autoRefresh" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
-                    <Label htmlFor="autoRefresh">Auto Refresh</Label>
+                    <Label htmlFor="autoRefresh" className="text-sm font-medium">
+                      Auto Refresh
+                    </Label>
                   </div>
                   {autoRefresh && (
                     <div className="flex items-center space-x-2">
@@ -537,7 +571,7 @@ export default function Home() {
                         value={refreshIntervalSec}
                         onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
                         min={1}
-                        className="w-16"
+                        className="w-16 h-8"
                       />
                       <span className="text-sm text-muted-foreground">sec</span>
                     </div>
@@ -547,7 +581,7 @@ export default function Home() {
                     size="sm"
                     onClick={fetchLatestData}
                     disabled={loading}
-                    className="bg-background text-foreground hover:bg-muted"
+                    className="bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
                   >
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -559,26 +593,17 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-[500px] w-full rounded-md border overflow-hidden">
-                  {loading && latestData.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                        <p className="mt-4 text-muted-foreground">Loading vehicle locations...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <VehicleMap devices={latestData} />
-                  )}
+                <div className="h-[500px] w-full rounded-lg border border-border overflow-hidden bg-muted/10">
+                  <VehicleMap devices={latestData} />
                 </div>
               </CardContent>
             </Card>
 
             {latestData.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
+                <Card className="shadow-lg border-0 bg-card">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Vehicles</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Vehicles</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-primary">{latestData.length}</div>
@@ -586,9 +611,9 @@ export default function Home() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="shadow-lg border-0 bg-card">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Good Battery</CardTitle>
+                    <CardTitle className="text-sm font-medium">Good Battery</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-500">
@@ -598,9 +623,9 @@ export default function Home() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="shadow-lg border-0 bg-card">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Low Battery</CardTitle>
+                    <CardTitle className="text-sm font-medium">Low Battery</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-orange-500">
@@ -615,14 +640,14 @@ export default function Home() {
 
           {/* Commands Tab */}
           <TabsContent value="commands" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Send Command</CardTitle>
+            <Card className="shadow-lg border-0 bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">Send Command</CardTitle>
                 <CardDescription>Configure and send commands to your fleet</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mb-6">
-                  <h3 className="text-sm font-medium mb-2">Command Templates</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Command Templates</h3>
                   <div className="flex flex-wrap gap-2">
                     {commandTemplates.map((template, index) => (
                       <Button
@@ -630,7 +655,7 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         onClick={() => loadCommandTemplate(template)}
-                        className="bg-background text-foreground hover:bg-muted"
+                        className="bg-background text-foreground border-border hover:bg-muted hover:text-foreground transition-all duration-200"
                       >
                         {template.name}
                       </Button>
@@ -640,27 +665,30 @@ export default function Home() {
 
                 <form onSubmit={handleCommandSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="command">Command</Label>
+                    <Label htmlFor="command" className="text-sm font-medium">
+                      Command
+                    </Label>
                     <Input
                       id="command"
                       type="text"
                       value={command}
                       onChange={(e) => setCommand(e.target.value)}
-                      placeholder="Enter command (e.g., set_wifi, deactivate)"
+                      placeholder="Enter command (e.g., set_wifi, kill_device)"
+                      className="bg-background border-border"
                       required
                     />
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label>Parameters</Label>
+                      <Label className="text-sm font-medium">Parameters</Label>
                       {params.length < 10 && (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={handleAddParam}
-                          className="bg-background text-foreground hover:bg-muted"
+                          className="bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Parameter
@@ -669,7 +697,7 @@ export default function Home() {
                     </div>
 
                     {params.length > 0 ? (
-                      <div className="space-y-3 border rounded-md p-4">
+                      <div className="space-y-3 border border-border rounded-lg p-4 bg-muted/20">
                         {params.map((param, index) => (
                           <div key={index} className="flex items-center space-x-3">
                             <Input
@@ -677,7 +705,7 @@ export default function Home() {
                               value={param.key}
                               onChange={(e) => handleParamChange(index, "key", e.target.value)}
                               placeholder="Key"
-                              className="flex-1"
+                              className="flex-1 bg-background border-border"
                               required
                             />
                             <Input
@@ -685,7 +713,7 @@ export default function Home() {
                               value={param.value}
                               onChange={(e) => handleParamChange(index, "value", e.target.value)}
                               placeholder="Value"
-                              className="flex-1"
+                              className="flex-1 bg-background border-border"
                               required
                             />
                             <Button
@@ -701,14 +729,14 @@ export default function Home() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center p-6 border border-dashed rounded-md">
-                        <p className="text-sm text-muted-foreground">No parameters added yet.</p>
+                      <div className="text-center p-6 border border-dashed border-border rounded-lg bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-2">No parameters added yet.</p>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={handleAddParam}
-                          className="mt-2 bg-background text-foreground hover:bg-muted"
+                          className="bg-background text-foreground border-border hover:bg-muted hover:text-foreground"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Parameter
@@ -721,7 +749,7 @@ export default function Home() {
                     <Button
                       type="submit"
                       disabled={commandLoading || !command}
-                      className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-all duration-200"
                     >
                       {commandLoading ? (
                         <>
@@ -737,14 +765,14 @@ export default function Home() {
                     </Button>
 
                     {commandSuccess && (
-                      <div className="p-4 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50">
-                        <p className="text-green-600 dark:text-green-400">{commandSuccess}</p>
+                      <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50">
+                        <p className="text-green-600 dark:text-green-400 font-medium">{commandSuccess}</p>
                       </div>
                     )}
 
                     {error && (
-                      <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50">
-                        <p className="text-red-600 dark:text-red-400">{error}</p>
+                      <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50">
+                        <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
                       </div>
                     )}
                   </div>
@@ -752,43 +780,43 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Available Commands</CardTitle>
+            <Card className="shadow-lg border-0 bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">Available Commands</CardTitle>
                 <CardDescription>Common commands for device management</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
-                  <div className="grid grid-cols-3 p-3 border-b bg-muted/50">
-                    <div className="font-medium">Command</div>
-                    <div className="font-medium">Description</div>
-                    <div className="font-medium">Parameters</div>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="grid grid-cols-3 p-4 border-b border-border bg-muted/50">
+                    <div className="font-semibold text-sm">Command</div>
+                    <div className="font-semibold text-sm">Description</div>
+                    <div className="font-semibold text-sm">Parameters</div>
                   </div>
-                  <div className="divide-y">
-                    <div className="grid grid-cols-3 p-3">
-                      <div className="font-medium">set_wifi</div>
-                      <div className="text-sm">Configure WiFi connection</div>
+                  <div className="divide-y divide-border">
+                    <div className="grid grid-cols-3 p-4">
+                      <div className="font-medium text-sm">set_wifi</div>
+                      <div className="text-sm text-muted-foreground">Configure WiFi connection</div>
                       <div className="text-sm text-muted-foreground">ssid, password</div>
                     </div>
-                    <div className="grid grid-cols-3 p-3">
-                      <div className="font-medium">deactivate</div>
-                      <div className="text-sm">Deactivate device temporarily</div>
-                      <div className="text-sm text-muted-foreground">device_id, reason</div>
+                    <div className="grid grid-cols-3 p-4">
+                      <div className="font-medium text-sm">kill_device</div>
+                      <div className="text-sm text-muted-foreground">Deactivate device immediately</div>
+                      <div className="text-sm text-muted-foreground">device_id</div>
                     </div>
-                    <div className="grid grid-cols-3 p-3">
-                      <div className="font-medium">set_sensor</div>
-                      <div className="text-sm">Configure current sensor type</div>
-                      <div className="text-sm text-muted-foreground">type (fluxgate/clip-on), calibration</div>
+                    <div className="grid grid-cols-3 p-4">
+                      <div className="font-medium text-sm">set_current_sensor</div>
+                      <div className="text-sm text-muted-foreground">Configure current sensor type</div>
+                      <div className="text-sm text-muted-foreground">type (fluxgate/clip-on), range (1x/2x/4x)</div>
                     </div>
-                    <div className="grid grid-cols-3 p-3">
-                      <div className="font-medium">update_firmware</div>
-                      <div className="text-sm">Update device firmware</div>
-                      <div className="text-sm text-muted-foreground">version, force</div>
+                    <div className="grid grid-cols-3 p-4">
+                      <div className="font-medium text-sm">set_voltage_range</div>
+                      <div className="text-sm text-muted-foreground">Configure voltage sensor range</div>
+                      <div className="text-sm text-muted-foreground">range (1x/2x/4x)</div>
                     </div>
-                    <div className="grid grid-cols-3 p-3">
-                      <div className="font-medium">set_reporting</div>
-                      <div className="text-sm">Configure reporting interval</div>
-                      <div className="text-sm text-muted-foreground">interval_sec, priority</div>
+                    <div className="grid grid-cols-3 p-4">
+                      <div className="font-medium text-sm">set_lte_config</div>
+                      <div className="text-sm text-muted-foreground">Configure LTE connection</div>
+                      <div className="text-sm text-muted-foreground">apn, username, password</div>
                     </div>
                   </div>
                 </div>
