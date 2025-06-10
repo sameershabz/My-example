@@ -1,18 +1,38 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const start = searchParams.get("start")
-    const end = searchParams.get("end")
-    const points = searchParams.get("points") || "24"
-
-    if (!start || !end) {
-      return NextResponse.json({ error: "Start and end parameters are required" }, { status: 400 })
+  // ── ① require refreshToken ──
+  const refreshToken = request.cookies.get("refreshToken")?.value
+  if (!refreshToken) {
+    return NextResponse.json({ error: "Missing refresh token" }, { status: 401 })
+  }
+  // ── ② exchange for access token ──
+  const clientId = process.env.COGNITO_CLIENT_ID!
+  const tokenRes = await fetch(
+    "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com/oauth2/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type:    "refresh_token",
+        client_id:     clientId,
+        refresh_token: refreshToken,
+      }),
     }
+  )
+  const { access_token: accessToken } = await tokenRes.json()
 
-    // Get AWS query URL from environment
-    const awsQueryUrl = process.env.AWS_QUERY_URL
+  const { searchParams } = new URL(request.url)
+  const start  = searchParams.get("start")
+  const end    = searchParams.get("end")
+  const points = searchParams.get("points") || "24"
+
+  if (!start || !end) {
+    return NextResponse.json({ error: "Start and end parameters are required" }, { status: 400 })
+  }
+
+  // Get AWS query URL from environment
+  const awsQueryUrl = process.env.AWS_QUERY_URL
     if (!awsQueryUrl) {
       return NextResponse.json({ error: "AWS query URL not configured" }, { status: 500 })
     }
@@ -26,10 +46,9 @@ export async function GET(request: NextRequest) {
 
     // Forward the query to AWS
     const response = await fetch(`${awsQueryUrl}?${queryParams}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+    headers: {
+        Authorization: `Bearer ${accessToken}`,
+    },
     })
 
     if (!response.ok) {
