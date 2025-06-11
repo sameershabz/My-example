@@ -349,36 +349,35 @@ export default function Home() {
       <div className="space-y-8">
         {/* Hero Header */}
         <div className="text-center py-8 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 rounded-2xl shadow-2xl">
-          <h1 className="text-5xl font-bold text-white mb-2">🚗 Fleet Command Center</h1>
+          <h1 className="text-5xl font-bold text-white mb-2">Fleet Command Center</h1>
           <p className="text-xl text-blue-100">Real-time monitoring and control for your connected vehicles</p>
         </div>
 
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Dashboard</h2>
-          <p className="text-gray-600 dark:text-gray-400">Monitor your fleet and analyze telemetry data</p>
         </div>
       </div>
 
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 p-1 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-transparent">
+          <TabsList className="grid w-full grid-cols-3 p-0 rounded-xl bg-transparent gap-2">
             <TabsTrigger
               value="chart"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              📊 Chart View
+              Chart View
             </TabsTrigger>
             <TabsTrigger
               value="map"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              🗺️ Map View
+              Map View
             </TabsTrigger>
             <TabsTrigger
               value="commands"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              ⚡ Commands
+              Commands
             </TabsTrigger>
           </TabsList>
 
@@ -463,8 +462,8 @@ export default function Home() {
 
                 {/* Time Range Section */}
                 {showTimeRange && (
-                  <div className="p-6 border-2 border-blue-200 dark:border-blue-700 rounded-xl bg-blue-50 dark:bg-blue-900/20 shadow-lg">
-                    <h3 className="text-lg font-bold text-blue-800 dark:text-blue-300 mb-4">⏰ Select Time Range</h3>
+                  <div className="p-6 rounded-xl bg-blue-50 dark:bg-blue-900/20 shadow-lg">
+                    <h3 className="text-lg font-bold text-blue-800 dark:text-blue-300 mb-4">Select Time Range</h3>
                     <div className="flex flex-wrap gap-3">
                       {timeRanges.map((r) => (
                         <Button
@@ -488,7 +487,7 @@ export default function Home() {
 
                     {/* Custom Date Range */}
                     {timeRange === "custom" && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg">
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-blue-800 dark:text-blue-300">Start Date</Label>
                           <Popover>
@@ -548,8 +547,8 @@ export default function Home() {
 
                 {/* Device Filter Section */}
                 {showDeviceFilter && (
-                  <div className="p-6 border-2 border-green-200 dark:border-green-700 rounded-xl bg-green-50 dark:bg-green-900/20 shadow-lg">
-                    <h3 className="text-lg font-bold text-green-800 dark:text-green-300 mb-4">🚗 Choose Devices</h3>
+                  <div className="p-6 rounded-xl bg-green-50 dark:bg-green-900/20 shadow-lg">
+                    <h3 className="text-lg font-bold text-green-800 dark:text-green-300 mb-4">Choose Devices</h3>
                     <div className="flex flex-wrap gap-3">
                       {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
                         <Button
@@ -583,10 +582,8 @@ export default function Home() {
 
                 {/* Data Fields Section */}
                 {showDataFields && (
-                  <div className="p-6 border-2 border-purple-200 dark:border-purple-700 rounded-xl bg-purple-50 dark:bg-purple-900/20 shadow-lg">
-                    <h3 className="text-lg font-bold text-purple-800 dark:text-purple-300 mb-4">
-                      📊 Select Data Fields
-                    </h3>
+                  <div className="p-6 rounded-xl bg-purple-50 dark:bg-purple-900/20 shadow-lg">
+                    <h3 className="text-lg font-bold text-purple-800 dark:text-purple-300 mb-4">Select Data Fields</h3>
                     <div className="flex flex-wrap gap-3">
                       {allFields.map((field) => (
                         <Button
@@ -627,7 +624,7 @@ export default function Home() {
             <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
-                  <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">🗺️ Vehicle Locations</CardTitle>
+                  <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">Vehicle Locations</CardTitle>
                   <CardDescription className="text-base text-gray-600 dark:text-gray-400">
                     Real-time positions of {latestData.length} vehicles
                   </CardDescription>
@@ -679,7 +676,7 @@ export default function Home() {
                 <Card className="shadow-lg border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-semibold text-blue-800 dark:text-blue-300">
-                      🚗 Total Vehicles
+                      Total Vehicles
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -691,7 +688,7 @@ export default function Home() {
                 <Card className="shadow-lg border-2 border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-semibold text-green-800 dark:text-green-300">
-                      🔋 Good Battery
+                      Good Battery
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -705,7 +702,7 @@ export default function Home() {
                 <Card className="shadow-lg border-2 border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-semibold text-orange-800 dark:text-orange-300">
-                      ⚠️ Low Battery
+                      Low Battery
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -723,14 +720,14 @@ export default function Home() {
           <TabsContent value="commands" className="space-y-4">
             <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
               <CardHeader className="pb-4">
-                <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">⚡ Send Command</CardTitle>
+                <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">Send Command</CardTitle>
                 <CardDescription className="text-base text-gray-600 dark:text-gray-400">
                   Configure and send commands to your fleet
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">🎯 Command Templates</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Command Templates</h3>
                   <div className="flex flex-wrap gap-3">
                     {commandTemplates.map((template, index) => (
                       <Button
@@ -738,7 +735,14 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         onClick={() => loadCommandTemplate(template)}
-                        className="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-105"
+                        className={`
+                          bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-105
+                          ${
+                            command === template.command
+                              ? "bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:border-blue-400 dark:text-blue-300"
+                              : "text-gray-700 dark:text-gray-300"
+                          }
+                        `}
                       >
                         {template.name}
                       </Button>
@@ -863,9 +867,9 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
+            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
               <CardHeader className="pb-4">
-                <CardTitle className="text-xl text-gray-900 dark:text-gray-100">📋 Available Commands</CardTitle>
+                <CardTitle className="text-xl text-gray-900 dark:text-gray-100">Available Commands</CardTitle>
                 <CardDescription className="text-gray-600 dark:text-gray-400">
                   Common commands for device management
                 </CardDescription>
