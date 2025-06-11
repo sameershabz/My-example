@@ -13,24 +13,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // Clear any stale auth state on mount
-  useEffect(() => {
-    try {
-      // Clear any stale state that might cause "No matching state" errors
-      if (typeof window !== "undefined") {
-        const keys = Object.keys(localStorage)
-        keys.forEach((key) => {
-          if (key.startsWith("oidc.") || key.includes("state") || key.includes("nonce")) {
-            localStorage.removeItem(key)
-          }
-        })
-      }
-    } catch (error) {
-      console.warn("Error clearing stale auth state:", error)
-    }
-  }, [])
-
-  // Handle auth state changes
+  // 2) Handle auth state changes
   useEffect(() => {
     // Wait for auth to initialize
     if (auth.isLoading) return
@@ -40,29 +23,19 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // Handle auth errors (like "no matching state")
     if (auth.error) {
       console.warn("Auth error:", auth.error)
-
-      // Try to clear the error and stale state
-      try {
-        auth.clearStaleState()
-        auth.removeUser()
-      } catch (clearError) {
-        console.warn("Error clearing auth state:", clearError)
-      }
-
-      // Only redirect if not already on signin page
-      if (pathname !== "/signin") {
-        router.replace("/signin")
-      }
+      // Clear the error and redirect to signin
+      auth.clearStaleState()
+      router.replace("/signin")
       return
     }
 
-    // If not authenticated and not on signin page, redirect to signin
-    if (!auth.isAuthenticated && pathname !== "/signin") {
+    // If not authenticated, redirect to signin
+    if (!auth.isAuthenticated) {
       router.replace("/signin")
     }
-  }, [auth.isLoading, auth.isAuthenticated, auth.error, router, pathname])
+  }, [auth.isLoading, auth.isAuthenticated, auth.error, router])
 
-  // If user is on /signin, don't protect the page
+  // 1) If user is on /signin, don't protect the page
   if (pathname === "/signin") {
     return <>{children}</>
   }
