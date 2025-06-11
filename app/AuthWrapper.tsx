@@ -29,14 +29,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return
     }
 
-
+    // If not authenticated, redirect to signin
+    if (!auth.isAuthenticated) {
+      router.replace("/signin")
+    }
   }, [auth.isLoading, auth.isAuthenticated, auth.error, router])
 
   // 1) If user is on /signin, don't protect the page
   if (pathname === "/signin") {
     return <>{children}</>
   }
-
 
   // Show loading while initializing
   if (!isInitialized || auth.isLoading) {
