@@ -30,6 +30,9 @@ import {
   Legend,
   type ChartData,
 } from "chart.js"
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
+import { ChevronDown, ChevronRight } from "lucide-react"
+
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -127,8 +130,8 @@ export default function Home() {
   const [error, setError] = useState("")
   const [chartFields, setChartFields] = useState<string[]>(["voltage_v"])
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"])
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
+const [startDate, setStartDate] = useState<Date | null>(null);
+const [endDate, setEndDate] = useState<Date | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>("1m")
   const [chartData, setChartData] = useState<ChartData<"line">>({ labels: [], datasets: [] })
   const [command, setCommand] = useState("")
@@ -140,6 +143,7 @@ export default function Home() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(5)
 
+  
   // Toggle states for the three concurrent sections
   const [showTimeRange, setShowTimeRange] = useState(true)
   const [showDeviceFilter, setShowDeviceFilter] = useState(false)
@@ -348,7 +352,7 @@ export default function Home() {
     <PageLayout>
       <div className="space-y-8">
         {/* Hero Header */}
-        <div className="text-center py-8 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 rounded-2xl shadow-2xl">
+        <div className="text-center py-8 bg-blue-700 rounded-2xl shadow-2xl">
           <h1 className="text-5xl font-bold text-white mb-2">Fleet Command Center</h1>
           <p className="text-xl text-blue-100">Real-time monitoring and control for your connected vehicles</p>
         </div>
@@ -360,22 +364,22 @@ export default function Home() {
 
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 p-0 rounded-xl bg-transparent gap-2">
+          <TabsList className="grid grid-cols-3 p-0 rounded-xl bg-transparent gap-2">
             <TabsTrigger
               value="chart"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg px-2 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-100 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Chart View
             </TabsTrigger>
             <TabsTrigger
               value="map"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg px-2 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-100 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Map View
             </TabsTrigger>
             <TabsTrigger
               value="commands"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg px-2 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-100 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Commands
             </TabsTrigger>
@@ -506,9 +510,9 @@ export default function Home() {
                             >
                               <Calendar
                                 mode="single"
-                                selected={startDate || undefined}
-                                onSelect={setStartDate}
-                                initialFocus
+                                selected={startDate ?? undefined}
+                                onSelect={(selected) => setStartDate(selected ?? null)}
+                                required={false}
                                 className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-0"
                               />
                             </PopoverContent>
@@ -532,9 +536,9 @@ export default function Home() {
                             >
                               <Calendar
                                 mode="single"
-                                selected={endDate || undefined}
-                                onSelect={setEndDate}
-                                initialFocus
+                                selected={endDate ?? undefined}
+                                onSelect={(selected) => setEndDate(selected ?? null)}
+                                required={false}
                                 className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-0"
                               />
                             </PopoverContent>
@@ -817,7 +821,6 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="text-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">No parameters added yet.</p>
                         <Button
                           type="button"
                           variant="outline"
@@ -867,52 +870,55 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl text-gray-900 dark:text-gray-100">Available Commands</CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
-                  Common commands for device management
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border-2 border-gray-300 dark:border-gray-600 overflow-hidden shadow-inner">
-                  <div className="grid grid-cols-3 p-4 border-b-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700">
-                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">Command</div>
-                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">Description</div>
-                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">Parameters</div>
-                  </div>
-                  <div className="divide-y-2 divide-gray-300 dark:divide-gray-600">
-                    <div className="grid grid-cols-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">set_wifi</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Configure WiFi connection</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">ssid, password</div>
-                    </div>
-                    <div className="grid grid-cols-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">kill_device</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Deactivate device immediately</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">device_id</div>
-                    </div>
-                    <div className="grid grid-cols-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">set_current_sensor</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Configure current sensor type</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        type (fluxgate/clip-on), range (1x/2x/4x)
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">set_voltage_range</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Configure voltage sensor range</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">range (1x/2x/4x)</div>
-                    </div>
-                    <div className="grid grid-cols-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">set_lte_config</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Configure LTE connection</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">apn, username, password</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+<Accordion type="single" collapsible className="w-full bg-white border border-gray-200 rounded-lg shadow">
+  <AccordionItem value="commands">
+    
+    <AccordionTrigger className="flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-900">
+      Available Commands
+    </AccordionTrigger>
+    <AccordionContent className="px-0 pt-0 pb-4">
+      {/* Header row */}
+      <div className="grid grid-cols-3 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="font-semibold text-sm text-gray-900">Command</div>
+        <div className="font-semibold text-sm text-gray-900">Description</div>
+        <div className="font-semibold text-sm text-gray-900">Parameters</div>
+      </div>
+      {/* Rows */}
+      <div className="divide-y divide-gray-200">
+        {commandTemplates.map((tpl) => {
+          // derive bracketed values for known commands
+          let paramDisplay = "";
+          if (tpl.command === "set_current_sensor") {
+            paramDisplay = "type [fluxgate, clip-on], range [1x, 2x, 4x]";
+          } else if (tpl.command === "set_voltage_range") {
+            paramDisplay = "range [1x, 2x, 4x]";
+          } else if (tpl.command === "set_wifi") {
+            paramDisplay = "ssid, password";
+          } else if (tpl.command === "kill_device") {
+            paramDisplay = "device_id";
+          } else if (tpl.command === "set_lte_config") {
+            paramDisplay = "apn, username, password";
+          } else {
+            // fallback: list keys without brackets
+            paramDisplay = tpl.params.map(p => p.key).join(", ");
+          }
+
+          return (
+            <div
+              key={tpl.command}
+              className="grid grid-cols-3 gap-2 px-4 py-2 hover:bg-gray-100 transition-colors"
+            >
+              <div className="text-sm text-gray-900">{tpl.command}</div>
+              <div className="text-sm text-gray-700">{tpl.name}</div>
+              <div className="text-sm text-gray-700">{paramDisplay}</div>
+            </div>
+          )
+        })}
+      </div>
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>
+
           </TabsContent>
         </Tabs>
       </div>
