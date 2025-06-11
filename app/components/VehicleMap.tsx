@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
 import type { Map as LeafletMap } from "leaflet"
 import L from "leaflet"
@@ -29,36 +29,24 @@ interface VehicleMapProps {
 
 export default function VehicleMap({ devices }: VehicleMapProps) {
   const mapRef = useRef<LeafletMap | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [mapKey, setMapKey] = useState(0)
 
-  // Force remount when devices change significantly
+  // Reset container's leaflet id on mount to avoid "already initialized" error.
   useEffect(() => {
-    setMapKey((prev) => prev + 1)
-  }, [devices.length])
+    const container = document.getElementById("mapid")
+    if (container && (container as any)._leaflet_id) {
+      ;(container as any)._leaflet_id = null
+    }
+  }, [])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (mapRef.current) {
-        try {
-          mapRef.current.off()
-          mapRef.current.remove()
-          mapRef.current = null
-        } catch (e) {
-          console.warn("Map cleanup error:", e)
-        }
+        mapRef.current.off()
+        mapRef.current.remove()
       }
     }
   }, [])
-
-  if (devices.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full bg-muted/20 rounded-lg">
-        <p className="text-muted-foreground">No location data available.</p>
-      </div>
-    )
-  }
 
   // Calculate bounds to fit all markers
   const getBounds = () => {
@@ -66,10 +54,17 @@ export default function VehicleMap({ devices }: VehicleMapProps) {
     return devices.map((d) => [Number(d.latitude), Number(d.longitude)])
   }
 
+  if (devices.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full bg-muted/20">
+        <p className="text-muted-foreground">No location data available.</p>
+      </div>
+    )
+  }
+
   return (
-    <div ref={containerRef} className="h-full w-full relative">
+    <div className="h-full w-full">
       <MapContainer
-        key={`map-${mapKey}`}
         center={devices.length > 0 ? [devices[0].latitude, devices[0].longitude] : [20, 0]}
         zoom={devices.length === 1 ? 10 : 2}
         scrollWheelZoom
@@ -79,9 +74,9 @@ export default function VehicleMap({ devices }: VehicleMapProps) {
           if (devices.length > 1) {
             try {
               // @ts-ignore - TypeScript doesn't recognize fitBounds with this signature
-              map.target.fitBounds(getBounds(), { padding: [20, 20] })
+              map.target.fitBounds(getBounds())
             } catch (e) {
-              console.warn("Error fitting bounds:", e)
+              console.error("Error fitting bounds:", e)
             }
           }
         }}
@@ -91,7 +86,7 @@ export default function VehicleMap({ devices }: VehicleMapProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {devices.map((d) => (
-          <Marker key={`${d.deviceId}-${d.timestamp}`} position={[Number(d.latitude), Number(d.longitude)]}>
+          <Marker key={d.deviceId} position={[Number(d.latitude), Number(d.longitude)]}>
             <Popup>
               <div className="p-1">
                 <strong>{d.deviceId}</strong>

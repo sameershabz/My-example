@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon, RefreshCw, Plus, Trash, Loader2, Send, ChevronRight, ChevronLeft } from "lucide-react"
+import { CalendarIcon, RefreshCw, Plus, Trash, Loader2, Send, Settings, Filter, Clock } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -57,18 +57,27 @@ const timeRanges: { label: string; value: TimeRange }[] = [
   { label: "Custom", value: "custom" },
 ]
 
-// Group fields by category
-const fieldCategories = {
-  voltage: ["voltage_v"],
-  temperature: ["temperature_c"],
-  speed: ["speed", "speed_kmh"],
-  position: ["lat", "lon", "alt_m", "heading_deg"],
-  quality: ["quality_min", "quality_avg"],
-  current: ["min", "avg", "max"],
-  signal: ["signal_strength_dbm"],
-  acceleration: ["accel_x", "accel_y", "accel_z"],
-  power: ["power_kw"],
-}
+// All fields on one level - no subcategorization
+const allFields = [
+  "voltage_v",
+  "temperature_c",
+  "speed",
+  "speed_kmh",
+  "lat",
+  "lon",
+  "alt_m",
+  "heading_deg",
+  "quality_min",
+  "quality_avg",
+  "min",
+  "avg",
+  "max",
+  "signal_strength_dbm",
+  "accel_x",
+  "accel_y",
+  "accel_z",
+  "power_kw",
+]
 
 // Updated command templates
 const commandTemplates = [
@@ -131,9 +140,10 @@ export default function Home() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(5)
 
-  // Step-by-step control state
-  const [currentStep, setCurrentStep] = useState<"timeRange" | "devices" | "category" | "fields">("timeRange")
-  const [activeCategory, setActiveCategory] = useState<string>("voltage")
+  // Toggle states for the three concurrent sections
+  const [showTimeRange, setShowTimeRange] = useState(true)
+  const [showDeviceFilter, setShowDeviceFilter] = useState(false)
+  const [showDataFields, setShowDataFields] = useState(false)
 
   const fetchLatestData = () => {
     fetch(config.api.gnssTime, { credentials: "include" })
@@ -334,22 +344,6 @@ export default function Home() {
     return true
   })
 
-  // Get current category fields
-  const currentCategoryFields = fieldCategories[activeCategory as keyof typeof fieldCategories] || []
-
-  // Navigation helpers
-  const goToNextStep = () => {
-    if (currentStep === "timeRange") setCurrentStep("devices")
-    else if (currentStep === "devices") setCurrentStep("category")
-    else if (currentStep === "category") setCurrentStep("fields")
-  }
-
-  const goToPrevStep = () => {
-    if (currentStep === "fields") setCurrentStep("category")
-    else if (currentStep === "category") setCurrentStep("devices")
-    else if (currentStep === "devices") setCurrentStep("timeRange")
-  }
-
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -359,80 +353,111 @@ export default function Home() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 bg-muted p-1 rounded-lg border border-border">
+          <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-muted to-muted/80 p-1 rounded-xl shadow-lg">
             <TabsTrigger
               value="chart"
-              className="rounded-md px-3 py-2 text-sm font-medium transition-all border border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-border"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-md data-[state=active]:scale-105"
             >
-              Chart View
+              📊 Chart View
             </TabsTrigger>
             <TabsTrigger
               value="map"
-              className="rounded-md px-3 py-2 text-sm font-medium transition-all border border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-border"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-md data-[state=active]:scale-105"
             >
-              Map View
+              🗺️ Map View
             </TabsTrigger>
             <TabsTrigger
               value="commands"
-              className="rounded-md px-3 py-2 text-sm font-medium transition-all border border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-border"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-md data-[state=active]:scale-105"
             >
-              Commands
+              ⚡ Commands
             </TabsTrigger>
           </TabsList>
 
           {/* Chart View Tab */}
-          <TabsContent value="chart" className="space-y-4">
-            <Card className="shadow-lg border border-border bg-card">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl">Data Visualization</CardTitle>
-                <CardDescription>Configure your chart settings step by step</CardDescription>
+          <TabsContent value="chart" className="space-y-6">
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                  Data Visualization
+                </CardTitle>
+                <CardDescription className="text-base">Configure your chart settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Step Navigation */}
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                {/* Control Toggle Buttons */}
+                <div className="flex flex-wrap gap-3">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToPrevStep}
-                    disabled={currentStep === "timeRange"}
-                    className="border-border bg-background hover:bg-muted"
+                    variant={showTimeRange ? "default" : "outline"}
+                    onClick={() => {
+                      setShowTimeRange(!showTimeRange)
+                      if (!showTimeRange) {
+                        setShowDeviceFilter(false)
+                        setShowDataFields(false)
+                      }
+                    }}
+                    className={`
+                      px-4 py-2 rounded-lg border-2 font-semibold transition-all duration-300 transform hover:scale-105
+                      ${
+                        showTimeRange
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/25"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                      }
+                    `}
                   >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
+                    <Clock className="w-4 h-4 mr-2" />
+                    Time Range
                   </Button>
 
-                  <div className="text-sm font-medium text-center">
-                    Step{" "}
-                    {currentStep === "timeRange"
-                      ? "1"
-                      : currentStep === "devices"
-                        ? "2"
-                        : currentStep === "category"
-                          ? "3"
-                          : "4"}{" "}
-                    of 4: {currentStep === "timeRange" && "Select Time Range"}
-                    {currentStep === "devices" && "Choose Devices"}
-                    {currentStep === "category" && "Pick Data Category"}
-                    {currentStep === "fields" && "Select Fields"}
-                  </div>
+                  <Button
+                    variant={showDeviceFilter ? "default" : "outline"}
+                    onClick={() => {
+                      setShowDeviceFilter(!showDeviceFilter)
+                      if (!showDeviceFilter) {
+                        setShowTimeRange(false)
+                        setShowDataFields(false)
+                      }
+                    }}
+                    className={`
+                      px-4 py-2 rounded-lg border-2 font-semibold transition-all duration-300 transform hover:scale-105
+                      ${
+                        showDeviceFilter
+                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500 shadow-lg shadow-green-500/25"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-green-400 hover:bg-green-50"
+                      }
+                    `}
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    Device Filter
+                  </Button>
 
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToNextStep}
-                    disabled={currentStep === "fields"}
-                    className="border-border bg-background hover:bg-muted"
+                    variant={showDataFields ? "default" : "outline"}
+                    onClick={() => {
+                      setShowDataFields(!showDataFields)
+                      if (!showDataFields) {
+                        setShowTimeRange(false)
+                        setShowDeviceFilter(false)
+                      }
+                    }}
+                    className={`
+                      px-4 py-2 rounded-lg border-2 font-semibold transition-all duration-300 transform hover:scale-105
+                      ${
+                        showDataFields
+                          ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white border-purple-500 shadow-lg shadow-purple-500/25"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-purple-400 hover:bg-purple-50"
+                      }
+                    `}
                   >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
+                    <Settings className="w-4 h-4 mr-2" />
+                    Data Fields
                   </Button>
                 </div>
 
-                {/* Step 1: Time Range Selector */}
-                {currentStep === "timeRange" && (
-                  <div className="space-y-4 p-4 border border-border rounded-lg bg-background">
-                    <h3 className="text-lg font-semibold text-foreground">Select Time Range</h3>
-                    <div className="flex flex-wrap gap-2">
+                {/* Time Range Section */}
+                {showTimeRange && (
+                  <div className="p-6 border-2 border-blue-200 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-lg">
+                    <h3 className="text-lg font-bold text-blue-800 mb-4">⏰ Select Time Range</h3>
+                    <div className="flex flex-wrap gap-3">
                       {timeRanges.map((r) => (
                         <Button
                           key={r.value}
@@ -440,11 +465,11 @@ export default function Home() {
                           size="sm"
                           onClick={() => setTimeRange(r.value)}
                           className={`
-                            transition-all duration-200 font-medium border-2
+                            px-3 py-2 rounded-lg border-2 font-medium transition-all duration-200 transform hover:scale-105
                             ${
                               timeRange === r.value
-                                ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90"
-                                : "bg-background text-foreground border-border hover:bg-muted hover:border-muted-foreground"
+                                ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-md"
+                                : "bg-white text-blue-700 border-blue-300 hover:border-blue-500 hover:bg-blue-50"
                             }
                           `}
                         >
@@ -455,21 +480,21 @@ export default function Home() {
 
                     {/* Custom Date Range */}
                     {timeRange === "custom" && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border mt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-white/70 rounded-lg border border-blue-200">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">Start Date</Label>
+                          <Label className="text-sm font-semibold text-blue-800">Start Date</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
-                                className="w-full justify-start text-left font-normal bg-background border-2 border-border hover:bg-muted"
+                                className="w-full justify-start text-left font-normal bg-white border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50"
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent
-                              className="w-auto p-0 bg-background border-2 border-border shadow-lg z-50"
+                              className="w-auto p-0 bg-white border-2 border-blue-300 shadow-xl z-50"
                               align="start"
                             >
                               <Calendar
@@ -477,25 +502,25 @@ export default function Home() {
                                 selected={startDate || undefined}
                                 onSelect={setStartDate}
                                 initialFocus
-                                className="bg-background text-foreground border-0"
+                                className="bg-white text-foreground border-0"
                               />
                             </PopoverContent>
                           </Popover>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">End Date</Label>
+                          <Label className="text-sm font-semibold text-blue-800">End Date</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
-                                className="w-full justify-start text-left font-normal bg-background border-2 border-border hover:bg-muted"
+                                className="w-full justify-start text-left font-normal bg-white border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50"
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent
-                              className="w-auto p-0 bg-background border-2 border-border shadow-lg z-50"
+                              className="w-auto p-0 bg-white border-2 border-blue-300 shadow-xl z-50"
                               align="start"
                             >
                               <Calendar
@@ -503,7 +528,7 @@ export default function Home() {
                                 selected={endDate || undefined}
                                 onSelect={setEndDate}
                                 initialFocus
-                                className="bg-background text-foreground border-0"
+                                className="bg-white text-foreground border-0"
                               />
                             </PopoverContent>
                           </Popover>
@@ -513,11 +538,11 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Step 2: Device Filter */}
-                {currentStep === "devices" && (
-                  <div className="space-y-4 p-4 border border-border rounded-lg bg-background">
-                    <h3 className="text-lg font-semibold text-foreground">Choose Devices</h3>
-                    <div className="flex flex-wrap gap-2">
+                {/* Device Filter Section */}
+                {showDeviceFilter && (
+                  <div className="p-6 border-2 border-green-200 rounded-xl bg-gradient-to-br from-green-50 to-green-100/50 shadow-lg">
+                    <h3 className="text-lg font-bold text-green-800 mb-4">🚗 Choose Devices</h3>
+                    <div className="flex flex-wrap gap-3">
                       {["all", ...new Set(apiData.map((d) => d.deviceID))].map((dev) => (
                         <Button
                           key={dev}
@@ -533,11 +558,11 @@ export default function Home() {
                             })
                           }}
                           className={`
-                            transition-all duration-200 font-medium border-2
+                            px-3 py-2 rounded-lg border-2 font-medium transition-all duration-200 transform hover:scale-105
                             ${
                               selectedDevices.includes(dev)
-                                ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90"
-                                : "bg-background text-foreground border-border hover:bg-muted hover:border-muted-foreground"
+                                ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-600 shadow-md"
+                                : "bg-white text-green-700 border-green-300 hover:border-green-500 hover:bg-green-50"
                             }
                           `}
                         >
@@ -548,58 +573,31 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Step 3: Category Selector */}
-                {currentStep === "category" && (
-                  <div className="space-y-4 p-4 border border-border rounded-lg bg-background">
-                    <h3 className="text-lg font-semibold text-foreground">Pick Data Category</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.keys(fieldCategories).map((category) => (
+                {/* Data Fields Section */}
+                {showDataFields && (
+                  <div className="p-6 border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 shadow-lg">
+                    <h3 className="text-lg font-bold text-purple-800 mb-4">📊 Select Data Fields</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {allFields.map((field) => (
                         <Button
-                          key={category}
-                          variant={activeCategory === category ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setActiveCategory(category)}
-                          className={`
-                            transition-all duration-200 font-medium capitalize border-2
-                            ${
-                              activeCategory === category
-                                ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90"
-                                : "bg-background text-foreground border-border hover:bg-muted hover:border-muted-foreground"
-                            }
-                          `}
-                        >
-                          {category}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 4: Field Selector */}
-                {currentStep === "fields" && (
-                  <div className="space-y-4 p-4 border border-border rounded-lg bg-background">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Select {activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} Fields
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {currentCategoryFields.map((f) => (
-                        <Button
-                          key={f}
-                          variant={chartFields.includes(f) ? "default" : "outline"}
+                          key={field}
+                          variant={chartFields.includes(field) ? "default" : "outline"}
                           size="sm"
                           onClick={() =>
-                            setChartFields((cf) => (cf.includes(f) ? cf.filter((x) => x !== f) : [...cf, f]))
+                            setChartFields((cf) =>
+                              cf.includes(field) ? cf.filter((x) => x !== field) : [...cf, field],
+                            )
                           }
                           className={`
-                            transition-all duration-200 font-medium border-2
+                            px-3 py-2 rounded-lg border-2 font-medium transition-all duration-200 transform hover:scale-105
                             ${
-                              chartFields.includes(f)
-                                ? "bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90"
-                                : "bg-background text-foreground border-border hover:bg-muted hover:border-muted-foreground"
+                              chartFields.includes(field)
+                                ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600 shadow-md"
+                                : "bg-white text-purple-700 border-purple-300 hover:border-purple-500 hover:bg-purple-50"
                             }
                           `}
                         >
-                          {f}
+                          {field}
                         </Button>
                       ))}
                     </div>
@@ -607,7 +605,7 @@ export default function Home() {
                 )}
 
                 {/* Chart */}
-                <div className="pt-4">
+                <div className="pt-6">
                   <DataChart1 data={filteredApiData} chartFields={chartFields} loading={loading} />
                 </div>
               </CardContent>
@@ -616,11 +614,15 @@ export default function Home() {
 
           {/* Map View Tab */}
           <TabsContent value="map" className="space-y-4">
-            <Card className="shadow-lg border border-border bg-card">
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
-                  <CardTitle className="text-xl">Vehicle Locations</CardTitle>
-                  <CardDescription>Real-time positions of {latestData.length} vehicles</CardDescription>
+                  <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                    🗺️ Vehicle Locations
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Real-time positions of {latestData.length} vehicles
+                  </CardDescription>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
@@ -636,7 +638,7 @@ export default function Home() {
                         value={refreshIntervalSec}
                         onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
                         min={1}
-                        className="w-16 h-8 border-border"
+                        className="w-16 h-8 border-2 border-border"
                       />
                       <span className="text-sm text-muted-foreground">sec</span>
                     </div>
@@ -646,7 +648,7 @@ export default function Home() {
                     size="sm"
                     onClick={fetchLatestData}
                     disabled={loading}
-                    className="bg-background text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground"
+                    className="bg-white text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground transition-all duration-200 transform hover:scale-105"
                   >
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -658,45 +660,45 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-[500px] w-full rounded-lg border-2 border-border overflow-hidden bg-muted/10">
+                <div className="h-[500px] w-full rounded-xl border-2 border-border overflow-hidden bg-muted/10 shadow-inner">
                   <VehicleMap devices={latestData} />
                 </div>
               </CardContent>
             </Card>
 
             {latestData.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="shadow-lg border border-border bg-card">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Total Vehicles</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-blue-800">🚗 Total Vehicles</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-primary">{latestData.length}</div>
-                    <p className="text-xs text-muted-foreground">Active in fleet</p>
+                    <div className="text-3xl font-bold text-blue-600">{latestData.length}</div>
+                    <p className="text-xs text-blue-600/70">Active in fleet</p>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border border-border bg-card">
+                <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Good Battery</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-green-800">🔋 Good Battery</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-500">
+                    <div className="text-3xl font-bold text-green-600">
                       {latestData.filter((d) => d.soc > 20).length}
                     </div>
-                    <p className="text-xs text-muted-foreground">SoC above 20%</p>
+                    <p className="text-xs text-green-600/70">SoC above 20%</p>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border border-border bg-card">
+                <Card className="shadow-lg border-0 bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Low Battery</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-orange-800">⚠️ Low Battery</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-orange-500">
+                    <div className="text-3xl font-bold text-orange-600">
                       {latestData.filter((d) => d.soc <= 20).length}
                     </div>
-                    <p className="text-xs text-muted-foreground">SoC below 20%</p>
+                    <p className="text-xs text-orange-600/70">SoC below 20%</p>
                   </CardContent>
                 </Card>
               </div>
@@ -705,22 +707,24 @@ export default function Home() {
 
           {/* Commands Tab */}
           <TabsContent value="commands" className="space-y-4">
-            <Card className="shadow-lg border border-border bg-card">
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-xl">Send Command</CardTitle>
-                <CardDescription>Configure and send commands to your fleet</CardDescription>
+                <CardTitle className="text-2xl bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                  ⚡ Send Command
+                </CardTitle>
+                <CardDescription className="text-base">Configure and send commands to your fleet</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Command Templates</h3>
-                  <div className="flex flex-wrap gap-2">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">🎯 Command Templates</h3>
+                  <div className="flex flex-wrap gap-3">
                     {commandTemplates.map((template, index) => (
                       <Button
                         key={index}
                         variant="outline"
                         size="sm"
                         onClick={() => loadCommandTemplate(template)}
-                        className="bg-background text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground transition-all duration-200"
+                        className="bg-white text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground transition-all duration-200 transform hover:scale-105"
                       >
                         {template.name}
                       </Button>
@@ -730,7 +734,7 @@ export default function Home() {
 
                 <form onSubmit={handleCommandSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="command" className="text-sm font-medium">
+                    <Label htmlFor="command" className="text-sm font-semibold">
                       Command
                     </Label>
                     <Input
@@ -739,21 +743,21 @@ export default function Home() {
                       value={command}
                       onChange={(e) => setCommand(e.target.value)}
                       placeholder="Enter command (e.g., set_wifi, kill_device)"
-                      className="bg-background border-2 border-border"
+                      className="bg-white border-2 border-border"
                       required
                     />
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Parameters</Label>
+                      <Label className="text-sm font-semibold">Parameters</Label>
                       {params.length < 10 && (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={handleAddParam}
-                          className="bg-background text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground"
+                          className="bg-white text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground transition-all duration-200 transform hover:scale-105"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Parameter
@@ -770,7 +774,7 @@ export default function Home() {
                               value={param.key}
                               onChange={(e) => handleParamChange(index, "key", e.target.value)}
                               placeholder="Key"
-                              className="flex-1 bg-background border-2 border-border"
+                              className="flex-1 bg-white border-2 border-border"
                               required
                             />
                             <Input
@@ -778,7 +782,7 @@ export default function Home() {
                               value={param.value}
                               onChange={(e) => handleParamChange(index, "value", e.target.value)}
                               placeholder="Value"
-                              className="flex-1 bg-background border-2 border-border"
+                              className="flex-1 bg-white border-2 border-border"
                               required
                             />
                             <Button
@@ -786,7 +790,7 @@ export default function Home() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleRemoveParam(index)}
-                              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 border-2 border-transparent hover:border-destructive/20"
+                              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 border-2 border-transparent hover:border-destructive/20 transition-all duration-200 transform hover:scale-110"
                             >
                               <Trash className="h-4 w-4" />
                             </Button>
@@ -801,7 +805,7 @@ export default function Home() {
                           variant="outline"
                           size="sm"
                           onClick={handleAddParam}
-                          className="bg-background text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground"
+                          className="bg-white text-foreground border-2 border-border hover:bg-muted hover:border-muted-foreground transition-all duration-200 transform hover:scale-105"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Parameter
@@ -814,7 +818,7 @@ export default function Home() {
                     <Button
                       type="submit"
                       disabled={commandLoading || !command}
-                      className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-all duration-200 border-2 border-primary"
+                      className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/90 text-primary-foreground hover:from-primary/90 hover:to-primary shadow-lg transition-all duration-200 transform hover:scale-105 border-2 border-primary"
                     >
                       {commandLoading ? (
                         <>
@@ -845,40 +849,40 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg border border-border bg-card">
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-xl">Available Commands</CardTitle>
+                <CardTitle className="text-xl">📋 Available Commands</CardTitle>
                 <CardDescription>Common commands for device management</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg border-2 border-border overflow-hidden">
-                  <div className="grid grid-cols-3 p-4 border-b-2 border-border bg-muted/50">
-                    <div className="font-semibold text-sm">Command</div>
-                    <div className="font-semibold text-sm">Description</div>
-                    <div className="font-semibold text-sm">Parameters</div>
+                <div className="rounded-lg border-2 border-border overflow-hidden shadow-inner">
+                  <div className="grid grid-cols-3 p-4 border-b-2 border-border bg-gradient-to-r from-muted to-muted/80">
+                    <div className="font-bold text-sm">Command</div>
+                    <div className="font-bold text-sm">Description</div>
+                    <div className="font-bold text-sm">Parameters</div>
                   </div>
                   <div className="divide-y-2 divide-border">
-                    <div className="grid grid-cols-3 p-4">
+                    <div className="grid grid-cols-3 p-4 hover:bg-muted/30 transition-colors">
                       <div className="font-medium text-sm">set_wifi</div>
                       <div className="text-sm text-muted-foreground">Configure WiFi connection</div>
                       <div className="text-sm text-muted-foreground">ssid, password</div>
                     </div>
-                    <div className="grid grid-cols-3 p-4">
+                    <div className="grid grid-cols-3 p-4 hover:bg-muted/30 transition-colors">
                       <div className="font-medium text-sm">kill_device</div>
                       <div className="text-sm text-muted-foreground">Deactivate device immediately</div>
                       <div className="text-sm text-muted-foreground">device_id</div>
                     </div>
-                    <div className="grid grid-cols-3 p-4">
+                    <div className="grid grid-cols-3 p-4 hover:bg-muted/30 transition-colors">
                       <div className="font-medium text-sm">set_current_sensor</div>
                       <div className="text-sm text-muted-foreground">Configure current sensor type</div>
                       <div className="text-sm text-muted-foreground">type (fluxgate/clip-on), range (1x/2x/4x)</div>
                     </div>
-                    <div className="grid grid-cols-3 p-4">
+                    <div className="grid grid-cols-3 p-4 hover:bg-muted/30 transition-colors">
                       <div className="font-medium text-sm">set_voltage_range</div>
                       <div className="text-sm text-muted-foreground">Configure voltage sensor range</div>
                       <div className="text-sm text-muted-foreground">range (1x/2x/4x)</div>
                     </div>
-                    <div className="grid grid-cols-3 p-4">
+                    <div className="grid grid-cols-3 p-4 hover:bg-muted/30 transition-colors">
                       <div className="font-medium text-sm">set_lte_config</div>
                       <div className="text-sm text-muted-foreground">Configure LTE connection</div>
                       <div className="text-sm text-muted-foreground">apn, username, password</div>
