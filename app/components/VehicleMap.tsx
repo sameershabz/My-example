@@ -1,18 +1,7 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
-import type { Map as LeafletMap } from "leaflet"
-import L from "leaflet"
+import { useEffect, useRef, useState } from "react"
 import "leaflet/dist/leaflet.css"
-
-// Fix Leaflet icons
-delete (L.Icon.Default.prototype as any)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-})
 
 export interface DeviceData {
   deviceId: string
@@ -27,84 +16,138 @@ interface VehicleMapProps {
   devices: DeviceData[]
 }
 
-export default function VehicleMap({ devices }: VehicleMapProps) {
-  const mapRef = useRef<LeafletMap | null>(null)
+// Create a simple map component that doesn't reuse containers
+function MapComponent({ devices }: VehicleMapProps) {
+  const mapRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [mapInstance, setMapInstance] = useState<any>(null)
 
-  // Reset container's leaflet id on mount to avoid "already initialized" error.
   useEffect(() => {
-    const container = document.getElementById("mapid")
-    if (container && (container as any)._leaflet_id) {
-      ;(container as any)._leaflet_id = null
-    }
-  }, [])
+    let map: any = null
+    let L: any = null
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.off()
-        mapRef.current.remove()
+    const initMap = async () => {
+      try {
+        // Dynamic import of leaflet to avoid SSR issues
+        const leaflet = await import("leaflet")
+        L = leaflet.default
+
+        // Fix default markers
+        delete (L.Icon.Default.prototype as any)._getIconUrl
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        })
+
+        if (containerRef.current && !mapInstance) {
+          // Create map with unique container
+          map = L.map(containerRef.current, {
+            center: devices.length > 0 ? [devices[0].latitude, devices[0].longitude] : [20, 0],
+            zoom: devices.length === 1 ? 10 : 2,
+            scrollWheelZoom: true,
+          })
+
+          // Add tile layer
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+          }).addTo(map)
+
+          setMapInstance(map)
+          mapRef.current = map
+        }
+      } catch (error) {
+        console.error("Error initializing map:", error)
       }
     }
-  }, [])
 
-  // Calculate bounds to fit all markers
-  const getBounds = () => {
-    if (devices.length === 0) return [[0, 0]]
-    return devices.map((d) => [Number(d.latitude), Number(d.longitude)])
-  }
+    initMap()
+
+    // Cleanup function
+    return () => {
+      if (map) {
+        try {
+          map.remove()
+        } catch (e) {
+          console.warn("Map cleanup error:", e)
+        }
+      }
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove()
+        } catch (e) {
+          console.warn("Map ref cleanup error:", e)
+        }
+      }
+      setMapInstance(null)
+    }
+  }, []) // Only run once on mount
+
+  // Update markers when devices change
+  useEffect(() => {
+    if (!mapInstance || !window.L) return
+
+    const L = window.L
+
+    // Clear existing markers
+    mapInstance.eachLayer((layer: any) => {
+      if (layer instanceof L.Marker) {
+        mapInstance.removeLayer(layer)
+      }
+    })
+
+    // Add new markers
+    devices.forEach((device) => {
+      const marker = L.marker([device.latitude, device.longitude]).addTo(mapInstance)
+      marker.bindPopup(`
+        <div>
+          <strong>${device.deviceId}</strong><br/>
+          Timestamp: ${new Date(device.timestamp).toLocaleString()}<br/>
+          Lat: ${device.latitude.toFixed(5)}<br/>
+          Lon: ${device.longitude.toFixed(5)}<br/>
+          SoC: ${device.soc}%<br/>
+          Efficiency: ${device.efficiency}%
+        </div>
+      `)
+    })
+
+    // Fit bounds if multiple devices
+    if (devices.length > 1) {
+      const bounds = devices.map((d) => [d.latitude, d.longitude])
+      try {
+        mapInstance.fitBounds(bounds, { padding: [20, 20] })
+      } catch (e) {
+        console.warn("Error fitting bounds:", e)
+      }
+    }
+  }, [devices, mapInstance])
 
   if (devices.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full bg-muted/20">
-        <p className="text-muted-foreground">No location data available.</p>
+      <div className="flex items-center justify-center h-full bg-gray-100 text-gray-600 rounded-lg">
+        <p>No location data available.</p>
       </div>
     )
   }
 
-  return (
-    <div className="h-full w-full">
-      <MapContainer
-        center={devices.length > 0 ? [devices[0].latitude, devices[0].longitude] : [20, 0]}
-        zoom={devices.length === 1 ? 10 : 2}
-        scrollWheelZoom
-        style={{ width: "100%", height: "100%" }}
-        whenReady={(map) => {
-          mapRef.current = map.target
-          if (devices.length > 1) {
-            try {
-              // @ts-ignore - TypeScript doesn't recognize fitBounds with this signature
-              map.target.fitBounds(getBounds())
-            } catch (e) {
-              console.error("Error fitting bounds:", e)
-            }
-          }
-        }}
-      >
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {devices.map((d) => (
-          <Marker key={d.deviceId} position={[Number(d.latitude), Number(d.longitude)]}>
-            <Popup>
-              <div className="p-1">
-                <strong>{d.deviceId}</strong>
-                <br />
-                Timestamp: {new Date(d.timestamp).toLocaleString()}
-                <br />
-                Lat: {Number(d.latitude).toFixed(5)}
-                <br />
-                Lon: {Number(d.longitude).toFixed(5)}
-                <br />
-                SoC: {d.soc}%
-                <br />
-                Efficiency: {d.efficiency}%
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
-  )
+  return <div ref={containerRef} className="h-full w-full rounded-lg" />
+}
+
+// Export with dynamic loading to prevent SSR issues
+export default function VehicleMap(props: VehicleMapProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-100 text-gray-600">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  return <MapComponent {...props} />
 }
