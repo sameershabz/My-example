@@ -29,7 +29,7 @@ A Next.js application for vehicle telematics data visualization and management.
    npm run dev
    \`\`\`
 
-### Environment Variables
+### Environment Variables. 
 
 Required environment variables (see `.env.example`):
 
