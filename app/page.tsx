@@ -346,29 +346,37 @@ export default function Home() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">Monitor your fleet and analyze telemetry data</p>
+      <div className="space-y-8">
+        {/* Hero Header */}
+        <div className="text-center py-8 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 rounded-2xl shadow-2xl">
+          <h1 className="text-5xl font-bold text-white mb-2">🚗 Fleet Command Center</h1>
+          <p className="text-xl text-blue-100">Real-time monitoring and control for your connected vehicles</p>
         </div>
 
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Dashboard</h2>
+          <p className="text-gray-600 dark:text-gray-400">Monitor your fleet and analyze telemetry data</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-700 p-1 rounded-xl shadow-lg border-2 border-blue-200 dark:border-gray-600">
+          <TabsList className="grid w-full grid-cols-3 p-1 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-transparent">
             <TabsTrigger
               value="chart"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               📊 Chart View
             </TabsTrigger>
             <TabsTrigger
               value="map"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               🗺️ Map View
             </TabsTrigger>
             <TabsTrigger
               value="commands"
-              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300"
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:scale-105 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               ⚡ Commands
             </TabsTrigger>
@@ -376,7 +384,7 @@ export default function Home() {
 
           {/* Chart View Tab */}
           <TabsContent value="chart" className="space-y-6">
-            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
               <CardHeader className="pb-6">
                 <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">Data Visualization</CardTitle>
                 <CardDescription className="text-base text-gray-600 dark:text-gray-400">
@@ -616,7 +624,7 @@ export default function Home() {
 
           {/* Map View Tab */}
           <TabsContent value="map" className="space-y-4">
-            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
                   <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">🗺️ Vehicle Locations</CardTitle>
@@ -713,7 +721,7 @@ export default function Home() {
 
           {/* Commands Tab */}
           <TabsContent value="commands" className="space-y-4">
-            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
               <CardHeader className="pb-4">
                 <CardTitle className="text-2xl text-blue-600 dark:text-blue-400">⚡ Send Command</CardTitle>
                 <CardDescription className="text-base text-gray-600 dark:text-gray-400">
@@ -855,7 +863,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent">
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl text-gray-900 dark:text-gray-100">📋 Available Commands</CardTitle>
                 <CardDescription className="text-gray-600 dark:text-gray-400">
