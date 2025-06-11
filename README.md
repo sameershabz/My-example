@@ -4,7 +4,7 @@ A Next.js application for vehicle telematics data visualization and management.
 
 ## Getting Started
 
-### Prerequisites..
+### Prerequisites.
 
 - Node.js 18+ 
 - npm or yarn or pnpm
