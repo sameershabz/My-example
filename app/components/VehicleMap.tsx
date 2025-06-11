@@ -1,99 +1,86 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
-import type { Map as LeafletMap } from "leaflet"
-import L from "leaflet"
-import "leaflet/dist/leaflet.css"
+import React, { useEffect, useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import type { Map as LeafletMap } from "leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 // Fix Leaflet icons
-delete (L.Icon.Default.prototype as any)._getIconUrl
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-})
+});
 
 export interface DeviceData {
-  deviceId: string
-  latitude: number
-  longitude: number
-  timestamp: string
-  efficiency: number
-  soc: number
+  deviceId: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  efficiency: number;
+  soc: number;
 }
 
 interface VehicleMapProps {
-  devices: DeviceData[]
+  devices: DeviceData[];
 }
 
 export default function VehicleMap({ devices }: VehicleMapProps) {
-  const mapRef = useRef<LeafletMap | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [mapKey, setMapKey] = useState(0)
+  if (devices.length === 0) {
+    return (
+      <div className="text-center text-white py-20">
+        No location data available.
+      </div>
+    );
+  }
+  const mapRef = useRef<LeafletMap | null>(null);
+  // Force a unique key if needed during hot reload
+  const [mapKey] = useState(Date.now());
 
-  // Force remount when devices change significantly
+  // Cleanup on unmount: remove event listeners & the map
+
+  // Reset container's leaflet id on mount to avoid "already initialized" error.
   useEffect(() => {
-    setMapKey((prev) => prev + 1)
-  }, [devices.length])
+    const container = document.getElementById("mapid");
+    if (container && (container as any)._leaflet_id) {
+      (container as any)._leaflet_id = null;
+    }
+  }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (mapRef.current) {
-        try {
-          mapRef.current.off()
-          mapRef.current.remove()
-          mapRef.current = null
-        } catch (e) {
-          console.warn("Map cleanup error:", e)
-        }
+        mapRef.current.off();
+        mapRef.current.remove();
       }
-    }
-  }, [])
+    };
+  }, []);
 
-  if (devices.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full bg-muted/20 rounded-lg">
-        <p className="text-muted-foreground">No location data available.</p>
-      </div>
-    )
-  }
-
-  // Calculate bounds to fit all markers
-  const getBounds = () => {
-    if (devices.length === 0) return [[0, 0]]
-    return devices.map((d) => [Number(d.latitude), Number(d.longitude)])
-  }
+  const handleMapReady = (mapEvent: any) => {
+    // mapEvent is a Leaflet Event; the actual map instance is mapEvent.target
+    mapRef.current = mapEvent.target;
+  };
 
   return (
-    <div ref={containerRef} className="h-full w-full relative">
-      <MapContainer
-        key={`map-${mapKey}`}
-        center={devices.length > 0 ? [devices[0].latitude, devices[0].longitude] : [20, 0]}
-        zoom={devices.length === 1 ? 10 : 2}
-        scrollWheelZoom
-        style={{ width: "100%", height: "100%" }}
-        whenReady={(map) => {
-          mapRef.current = map.target
-          if (devices.length > 1) {
-            try {
-              // @ts-ignore - TypeScript doesn't recognize fitBounds with this signature
-              map.target.fitBounds(getBounds(), { padding: [20, 20] })
-            } catch (e) {
-              console.warn("Error fitting bounds:", e)
-            }
-          }
-        }}
-      >
+    <div style={{ width: "100%", height: "600px" }}>
+        <MapContainer
+          key={mapKey}
+          center={[20, 0]}
+          zoom={2}
+          scrollWheelZoom
+          style={{ width: "100%", height: "100%" }}
+        >
+
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {devices.map((d) => (
-          <Marker key={`${d.deviceId}-${d.timestamp}`} position={[Number(d.latitude), Number(d.longitude)]}>
+          <Marker key={d.deviceId} position={[Number(d.latitude), Number(d.longitude)]}>
             <Popup>
-              <div className="p-1">
+              <div>
                 <strong>{d.deviceId}</strong>
                 <br />
                 Timestamp: {new Date(d.timestamp).toLocaleString()}
@@ -111,5 +98,5 @@ export default function VehicleMap({ devices }: VehicleMapProps) {
         ))}
       </MapContainer>
     </div>
-  )
+  );
 }
