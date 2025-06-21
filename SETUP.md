@@ -9,7 +9,7 @@ Create a `.env.local` file in the root directory with the following variables:
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 
-# AWS Cognito Configuration
+# AWS Cognito Configuration:
 NEXT_PUBLIC_COGNITO_DOMAIN=https://your-cognito-domain.auth.us-east-1.amazoncognito.com
 NEXT_PUBLIC_COGNITO_CLIENT_ID=your-cognito-client-id
 NEXT_PUBLIC_AWS_REGION=us-east-1
