@@ -8,9 +8,10 @@ export const config = {
 
   // Authentication URLs
   auth: {
-    redirectUri: `${SITE_URL}/auth/callback`,
+    redirectUri: "http://localhost:3000/auth/callback",
     logoutUri: `${SITE_URL}/logout-callback`,
-    cognitoDomain: process.env.NEXT_PUBLIC_COGNITO_DOMAIN || "",
+    authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dlb9dc7ko",
+    hostedDomain: process.env.NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN || "",
     clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "",
     // userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "",
   },
@@ -41,17 +42,18 @@ export const getFullUrl = (path: string) => {
 
 // Helper function to get auth logout URL
 export const getLogoutUrl = () => {
-  if (!config.auth.cognitoDomain || !config.auth.clientId) {
+  if (!config.auth.hostedDomain || !config.auth.clientId) {
     console.error("Missing Cognito configuration")
     return "/signin"
   }
-  return `${config.auth.cognitoDomain}/logout?client_id=${config.auth.clientId}&logout_uri=${encodeURIComponent(config.auth.logoutUri)}`
+  return `${config.auth.hostedDomain}/logout?client_id=${config.auth.clientId}&logout_uri=${encodeURIComponent(config.auth.logoutUri)}`
 }
 
 // Validate required environment variables
 export const validateConfig = () => {
   const required = [
-    'NEXT_PUBLIC_COGNITO_DOMAIN',
+    'NEXT_PUBLIC_COGNITO_AUTHORITY',
+    'NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN',
     'NEXT_PUBLIC_COGNITO_CLIENT_ID',
     // 'NEXT_PUBLIC_COGNITO_USER_POOL_ID',
     'AWS_COMMAND_URL',
