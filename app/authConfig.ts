@@ -12,7 +12,7 @@ const logoutUri = `${baseUrl}/logout-callback`
 
 
 export const cognitoAuthConfig = {
-  authority: `https://cognito-idp.${process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1'}.amazonaws.com/${config.auth.userPoolId}`,
+  authority: config.auth.cognitoDomain,
   client_id: config.auth.clientId,
   redirect_uri: config.auth.redirectUri,
   post_logout_redirect_uri: logoutUri,

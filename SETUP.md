@@ -12,7 +12,6 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 # AWS Cognito Configuration
 NEXT_PUBLIC_COGNITO_DOMAIN=https://your-cognito-domain.auth.us-east-1.amazoncognito.com
 NEXT_PUBLIC_COGNITO_CLIENT_ID=your-cognito-client-id
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_your-user-pool-id
 NEXT_PUBLIC_AWS_REGION=us-east-1
 
 # Server-side Cognito Configuration

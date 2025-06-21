@@ -9,10 +9,10 @@ import { cognitoAuthConfig } from "./authConfig"
 
 function AuthGate({ children }: { children: React.ReactNode }) {
 
-  if (process.env.NODE_ENV === "development") {
-    return <>{children}</>
-  }
-  
+  // if (process.env.NODE_ENV === "development") {
+  //   return <>{children}</>
+  // }
+
   const auth = useAuth()
   const router = useRouter()
   const pathname = usePathname()

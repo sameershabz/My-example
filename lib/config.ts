@@ -1,5 +1,5 @@
 // Get site URL from environment or use default
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://fleetdash.vercel.app/signin"
 
 // Centralized configuration for URLs and environment settings
 export const config = {
@@ -12,7 +12,7 @@ export const config = {
     logoutUri: `${SITE_URL}/logout-callback`,
     cognitoDomain: process.env.NEXT_PUBLIC_COGNITO_DOMAIN || "",
     clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "",
-    userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "",
+    // userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "",
   },
 
   // API endpoints
@@ -53,7 +53,7 @@ export const validateConfig = () => {
   const required = [
     'NEXT_PUBLIC_COGNITO_DOMAIN',
     'NEXT_PUBLIC_COGNITO_CLIENT_ID',
-    'NEXT_PUBLIC_COGNITO_USER_POOL_ID',
+    // 'NEXT_PUBLIC_COGNITO_USER_POOL_ID',
     'AWS_COMMAND_URL',
     'AWS_GNSS_URL',
     'AWS_QUERY_URL',
