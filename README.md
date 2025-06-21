@@ -1,6 +1,6 @@
 # Telematics Hub
 
-A Next.js application for vehicle telematics data visualization and management.
+A Next.js application for vehicle telematics data visualization and management
 
 ## Getting Started
 
