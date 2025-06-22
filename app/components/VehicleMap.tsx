@@ -109,8 +109,16 @@ function MapComponent({ devices }: VehicleMapProps) {
         console.warn("Error fitting bounds:", e)
       }
     } else if (devices.length === 1) {
-      map.setView([devices[0].latitude, devices[0].longitude], 10)
+      map.setView([devices[0].latitude, devices[0].longitude], 10) 
     }
+
+    // This is crucial for maps in hidden tabs
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize();
+      }
+    }, 100);
+
   }, [devices])
 
   if (devices.length === 0) {

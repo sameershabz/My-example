@@ -2,10 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("Raw data API request URL:", request.url);
+    // console.log("Raw data API request URL:", request.url);
     const { searchParams } = new URL(request.url);
-    console.log("Raw data API query parameters:", Object.fromEntries(searchParams.entries()));
-    console.log("Raw data API cookies:", request.cookies.get("refreshToken")?.value);
+    // console.log("Raw data API query parameters:", Object.fromEntries(searchParams.entries()));
+    // console.log("Raw data API cookies:", request.cookies.get("refreshToken")?.value);
 
     // ── ① require refreshToken ──
     const refreshToken = request.cookies.get("refreshToken")?.value
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       queryParams.append("deviceId", deviceId)
     }
     
-    console.log(`Raw data API: Fetching from ${awsRawDataUrl} with params:`, queryParams.toString())
+    // console.log(`Raw data API: Fetching from ${awsRawDataUrl} with params:`, queryParams.toString())
     
     const response = await fetch(`${awsRawDataUrl}?${queryParams}`, {
       headers: {

@@ -49,7 +49,7 @@ const timeRanges: { label: string; value: TimeRange }[] = [
   { label: "Custom", value: "custom" },
 ]
 
-// All fields on one level - no subcategorization
+// All fields on one level - no subcats
 const allFields = [
   "voltage_v",
   "temperature_c",
@@ -108,6 +108,16 @@ const commandTemplates = [
       { key: "password", value: "" },
     ],
   },
+  {
+    name: "Set IoT Config",
+    command: "set_iot_config",
+    params: [
+      { key: "root_ca", value: "" },
+      { key: "client_cert", value: "" },
+      { key: "client_key", value: "" },
+      { key: "endpoint", value: "" },
+    ],
+  },
 ]
 
 export default function Home() {
@@ -127,6 +137,7 @@ export default function Home() {
   const [commandLoading, setCommandLoading] = useState(false)
   const [commandSuccess, setCommandSuccess] = useState("")
   const [latestData, setLatestData] = useState<DeviceData[]>([])
+  const [mapLoading, setMapLoading] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(5)
   const [downsampleOptions, setDownsampleOptions] = useState<DownsampleOptions>({
@@ -134,53 +145,72 @@ export default function Home() {
     method: 'average'
   })
 
-  // New useEffect to derive map data from the main rawData state
-  useEffect(() => {
-    if (rawData.length > 0) {
-      const latestDataPerDevice = new Map<string, RawDataItem>()
+  // DECOUPLED: Fetches the last month of data specifically for the map
+  const fetchMapData = () => {
+    setMapLoading(true);
+    const end = new Date();
+    const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      for (const item of rawData) {
-        const existing = latestDataPerDevice.get(item.deviceID)
-        if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
-          latestDataPerDevice.set(item.deviceID, item)
+    const params = new URLSearchParams({
+      start: start.getTime().toString(),
+      end: end.getTime().toString(),
+    });
+
+    fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Map Data API ${res.status}: ${await res.text()}`);
+        return res.json();
+      })
+      .then((data) => {
+        const rawDataArray = Array.isArray(data) ? data : [];
+        if (rawDataArray.length > 0) {
+          const latestDataPerDevice = new Map<string, RawDataItem>();
+          for (const item of rawDataArray) {
+            const existing = latestDataPerDevice.get(item.deviceID);
+            if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
+              latestDataPerDevice.set(item.deviceID, item);
+            }
+          }
+          const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map(item => ({
+            deviceId: item.deviceID,
+            latitude: item.gnss?.lat ?? 0,
+            longitude: item.gnss?.lon ?? 0,
+            timestamp: item.timestamp,
+            soc: (item as any).soc ?? 0,
+            efficiency: (item as any).efficiency ?? 0,
+          }));
+          setLatestData(mapData);
+        } else {
+          setLatestData([]);
         }
-      }
+      })
+      .catch(err => {
+        console.error("Failed to fetch map data:", err);
+        setError(err.message); // You might want a separate mapError state
+      })
+      .finally(() => setMapLoading(false));
+  };
 
-      const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map(item => ({
-        deviceId: item.deviceID,
-        latitude: item.gnss?.lat ?? 0,
-        longitude: item.gnss?.lon ?? 0,
-        timestamp: item.timestamp,
-        soc: (item as any).soc ?? 0, // Add any missing properties if needed
-        efficiency: (item as any).efficiency ?? 0,
-      }))
-
-      setLatestData(mapData)
+  // Initial data fetch for the map
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      fetchMapData();
     }
-  }, [rawData])
+  }, [auth.isAuthenticated]);
 
-  // This function will now trigger a re-fetch of the main data source
-  const triggerDataRefresh = () => {
-    // Re-setting the time range will trigger the useEffect that sets dates,
-    // which in turn triggers the main data fetch useEffect.
-    const current = timeRange
-    setTimeRange("custom") // Temporarily change to allow re-trigger
-    setTimeout(() => setTimeRange(current), 0)
-  }
-
-  // Auto-refresh logic now triggers the main data fetch
+  // Auto-refresh logic for the map
   useEffect(() => {
     let interval: NodeJS.Timeout
-    if (autoRefresh) {
+    if (autoRefresh && activeTab === 'map') {
       interval = setInterval(() => {
-        console.log("Auto-refreshing data...")
-        triggerDataRefresh()
+        console.log("Auto-refreshing map data...")
+        fetchMapData()
       }, refreshIntervalSec * 1000)
     }
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [autoRefresh, refreshIntervalSec, timeRange])
+  }, [autoRefresh, refreshIntervalSec, activeTab])
 
   // Fetch raw data when date range changes
   useEffect(() => {
@@ -334,9 +364,6 @@ export default function Home() {
   const router = useRouter()
 
   // Show loading state while auth is initializing
-
-
-
   if (auth.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -650,30 +677,47 @@ export default function Home() {
                       </CardDescription>
                     </div>
                     <div className="flex items-center space-x-4">
+                      <Switch checkedTrackColor="bg-blue-500" uncheckedTrackColor="bg-gray-300" thumbColor="bg-blue-500"
+                        checked={autoRefresh}
+                        onCheckedChange={setAutoRefresh}
+                        id="auto-refresh"
+                      />
+                      <Label htmlFor="auto-refresh" className="text-sm">Auto Refresh</Label>
                       <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={autoRefresh}
-                          onCheckedChange={setAutoRefresh}
-                          id="auto-refresh"
+                        <Label htmlFor="refresh-interval" className="text-sm">Interval (s):</Label>
+                        <Input
+                          id="refresh-interval"
+                          type="number"
+                          min="1"
+                          value={refreshIntervalSec}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10)
+                            if (!isNaN(val) && val > 0) setRefreshIntervalSec(val)
+                          }}
+                          className="w-20"
                         />
-                        <Label htmlFor="auto-refresh" className="text-sm">Auto Refresh</Label>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={triggerDataRefresh}
+                        onClick={fetchMapData}
+                        disabled={mapLoading}
                         className="flex items-center space-x-2"
                       >
-                        <RefreshCw className="h-4 w-4" />
+                        {mapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         <span>Refresh</span>
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-
                   <div className="h-[600px] rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-                    {latestData.length === 0 ? (
+                    {mapLoading && latestData.length === 0 ? (
+                       <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                        <p className="mt-4 text-slate-600 dark:text-slate-400">Loading Map Data...</p>
+                      </div>
+                    ) : latestData.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
                         <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
                           <MapPin className="w-8 h-8 text-slate-400 dark:text-slate-500" />
@@ -682,14 +726,15 @@ export default function Home() {
                           No Location Data Available
                         </h3>
                         <p className="text-slate-600 dark:text-slate-400 text-center max-w-md">
-                          No devices are currently reporting location data. Check your device connections or try refreshing.
+                          No devices have reported location data in the last month. Check your device connections or try refreshing.
                         </p>
                         <Button
                           variant="outline"
-                          onClick={triggerDataRefresh}
+                          onClick={fetchMapData}
+                          disabled={mapLoading}
                           className="mt-4 flex items-center space-x-2"
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          {mapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                           <span>Refresh Data</span>
                         </Button>
                       </div>
@@ -729,9 +774,10 @@ export default function Home() {
                             <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                               <li><strong>set_wifi</strong> - Configure WiFi credentials for device connectivity</li>
                               <li><strong>kill_device</strong> - Safely shut down a specific device</li>
-                              <li><strong>set_current_sensor</strong> - Configure current sensor type and range</li>
-                              <li><strong>set_voltage_range</strong> - Set voltage sensor measurement range</li>
+                              <li><strong>set_current_sensor</strong> - Configure current sensor type and range (fluxgate/hall; 1x,2x,4x)</li>
+                              <li><strong>set_voltage_range</strong> - Set voltage sensor measurement range (1x, 2x, 4x)</li>
                               <li><strong>set_lte_config</strong> - Configure LTE network settings</li>
+                              <li><strong>set_iot_config</strong> - Configure IoT certificates and endpoint (root CA, client cert, client key, endpoint)</li>
                             </ul>
                           </div>
                           <div>

@@ -4,6 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 
+@layer base {
+  button,
+  input[type="button"],
+  input[type="reset"],
+  input[type="submit"] {
+    background-color: none;
+  }
+} */
+
 /* CSS Custom Properties for premium theming */
 :root {
   --background: #ffffff;
@@ -554,3 +564,9 @@
 .leaflet-popup-tip {
   background: var(--popover);
 }
+.leaflet-control .leaflet-control-zoom-in span,
+.leaflet-control .leaflet-control-zoom-out span {
+  color: black;
+}
+
+
