@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     // Remove the refresh token cookie
     const cookieStore = cookies()
-    cookieStore.delete("refresh_token")
+    cookieStore.delete("refreshToken")
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,19 +1,18 @@
 // Get site URL from environment or use default
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://fleetdash.vercel.app/signin"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
 
 // Centralized configuration for URLs and environment settings
 export const config = {
   // Base URLs
   baseUrl: SITE_URL,
 
-  // Authentication URLs
+  // Authentication URLs - simplified to match working example
   auth: {
-    redirectUri: "http://localhost:3000/auth/callback",
+    authority: process.env.NEXT_PUBLIC_COGNITO_AUTHORITY || "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dlB9DC7Ko",
+    clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "79ufsa70isosab15kpcmlm628d",
+    redirectUri: process.env.NEXT_PUBLIC_COGNITO_REDIRECT_URI || `${SITE_URL}/auth/callback`,
     logoutUri: `${SITE_URL}/logout-callback`,
-    authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dlb9dc7ko",
-    hostedDomain: process.env.NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN || "",
-    clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "",
-    // userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "",
+    cognitoDomain: process.env.NEXT_PUBLIC_COGNITO_DOMAIN || "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com",
   },
 
   // API endpoints
@@ -40,13 +39,12 @@ export const getFullUrl = (path: string) => {
   return `${config.baseUrl}${path}`
 }
 
-// Helper function to get auth logout URL
+// Helper function to get auth logout URL - simplified
 export const getLogoutUrl = () => {
-  if (!config.auth.hostedDomain || !config.auth.clientId) {
-    console.error("Missing Cognito configuration")
-    return "/signin"
-  }
-  return `${config.auth.hostedDomain}/logout?client_id=${config.auth.clientId}&logout_uri=${encodeURIComponent(config.auth.logoutUri)}`
+  const clientId = config.auth.clientId
+  const logoutUri = config.auth.logoutUri
+  const cognitoDomain = config.auth.cognitoDomain
+  return `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`
 }
 
 // Validate required environment variables
@@ -55,7 +53,6 @@ export const validateConfig = () => {
     'NEXT_PUBLIC_COGNITO_AUTHORITY',
     'NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN',
     'NEXT_PUBLIC_COGNITO_CLIENT_ID',
-    // 'NEXT_PUBLIC_COGNITO_USER_POOL_ID',
     'AWS_COMMAND_URL',
     'AWS_GNSS_URL',
     'AWS_QUERY_URL',

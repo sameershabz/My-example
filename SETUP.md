@@ -6,18 +6,16 @@ Create a `.env.local` file in the root directory with the following variables:
 
 ```bash
 # Site Configuration
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=https://fleetdash.vercel.app
+NEXT_PUBLIC_BASE_URL=https://fleetdash.vercel.app
 
-# AWS Cognito Configuration:
-NEXT_PUBLIC_COGNITO_DOMAIN=https://your-cognito-domain.auth.us-east-1.amazoncognito.com
-NEXT_PUBLIC_COGNITO_CLIENT_ID=your-cognito-client-id
-NEXT_PUBLIC_AWS_REGION=us-east-1
+# AWS Cognito Configuration - using exact values from working example
+NEXT_PUBLIC_COGNITO_AUTHORITY=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dlB9DC7Ko
+NEXT_PUBLIC_COGNITO_CLIENT_ID=79ufsa70isosab15kpcmlm628d
+NEXT_PUBLIC_COGNITO_DOMAIN=https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com
+NEXT_PUBLIC_COGNITO_REDIRECT_URI=https://fleetdash.vercel.app/auth/callback
 
-# Server-side Cognito Configuration
-COGNITO_CLIENT_ID=your-cognito-client-id
-
-# AWS API Endpoints
+# AWS API Endpoints (you'll need to update these with your actual endpoints)
 AWS_COMMAND_URL=https://your-api-gateway-url/command
 AWS_GNSS_URL=https://your-api-gateway-url/gnss
 AWS_QUERY_URL=https://your-api-gateway-url/query
@@ -45,10 +43,11 @@ AWS_RAW_DATA_URL=https://your-api-gateway-url/raw-data
 - Professional color scheme
 - Responsive design improvements
 
-### 4. Environment Variable Management
-- Centralized configuration in `lib/config.ts`
-- Proper validation of required variables
-- No hardcoded values
+### 4. Simplified Authentication
+- Removed complex validation and region checks
+- Using exact values from working example
+- Simplified auth config structure
+- Removed sidebar navigation
 
 ### 5. Data Processing
 - Raw data fetched from AWS
@@ -98,6 +97,7 @@ The AWS backend should provide these endpoints:
 - **Responsive Design**: Works on desktop and mobile
 - **Dark Mode**: Automatic theme switching
 - **Premium UI**: Modern, professional design
+- **Simplified Navigation**: Tabbed interface with logout button at top
 
 ## File Structure
 
@@ -111,9 +111,19 @@ app/
 ├── components/            # React components
 │   ├── DataChart1.tsx     # Chart component
 │   ├── VehicleMap.tsx     # Map component
-│   └── dashboard-layout.tsx
 ├── lib/
 │   ├── config.ts          # Configuration
 │   └── data-processor.ts  # Data processing utilities
 └── page.tsx               # Main dashboard
-``` 
+```
+
+## Authentication Flow
+
+The authentication now uses the exact same configuration as your working example:
+
+- **Authority**: `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_dlB9DC7Ko`
+- **Client ID**: `79ufsa70isosab15kpcmlm628d`
+- **Scope**: `email openid phone`
+- **Response Type**: `code`
+
+This matches your working React example exactly, ensuring compatibility. 

@@ -9,7 +9,12 @@
     "start": "next start"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@hookform/resolvers": "^3.9.1",
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
+    "@mui/x-date-pickers": "^8.5.3",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -45,6 +50,7 @@
     "cookie": "latest",
     "d3-time-format": "latest",
     "date-fns": "latest",
+    "dayjs": "^1.11.13",
     "embla-carousel-react": "latest",
     "input-otp": "latest",
     "leaflet": "latest",

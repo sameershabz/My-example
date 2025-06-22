@@ -3,9 +3,15 @@ import { NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
   // ── ① require refreshToken cookie ──
   const refreshToken = request.cookies.get("refreshToken")?.value
+  console.log("Command API refreshToken cookie:", refreshToken);
   if (!refreshToken) {
     return NextResponse.json({ error: "Missing refresh token" }, { status: 401 })
   }
+
+  const body = await request.json();
+  console.log("Command API request body:", body);
+  
+  const { command, params } = body;
 
   // ── ② exchange for accessToken ──
   const clientId = process.env.COGNITO_CLIENT_ID!
@@ -27,7 +33,6 @@ export async function POST(request: NextRequest) {
   const { access_token: accessToken } = await tokenRes.json()
 
   // ── ③ read body ──
-  const { command, params } = await request.json()
   if (!command) {
     return NextResponse.json({ error: "Command is required" }, { status: 400 })
   }

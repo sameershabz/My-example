@@ -8,7 +8,11 @@ export async function POST(request: NextRequest) {
   }
 
   const cookie = serialize("refreshToken", refresh_token, {
-    path: "/", httpOnly: true, secure: true, sameSite: "lax", maxAge: 60*60*24*30
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 30,
   })
   return NextResponse.json(
     { message: "Refresh token stored" },

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── ② exchange for access token ──
-    const clientId = process.env.COGNITO_CLIENT_ID!
+    const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!
     const tokenRes = await fetch(
       "https://us-east-1dlb9dc7ko.auth.us-east-1.amazoncognito.com/oauth2/token",
       {
