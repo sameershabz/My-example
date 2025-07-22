@@ -1,7 +1,7 @@
 // Get site URL from environment or use default
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
 
-// Centralized configuration for URLs and environment settings
+// Centralized configuration for URLs and environment settings. 
 export const config = {
   // Base URLs
   baseUrl: SITE_URL,
