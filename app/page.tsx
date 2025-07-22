@@ -149,7 +149,7 @@ export default function Home() {
   const fetchMapData = () => {
     setMapLoading(true);
     const end = new Date();
-    const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const start = new Date(end.getTime() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 months prior to now
 
     const params = new URLSearchParams({
       start: start.getTime().toString(),
