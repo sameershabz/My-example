@@ -13,11 +13,16 @@ export interface RawDataItem {
     heading_deg: number
   }
   voltage_v?: number
-  current_a?: { min: number; avg: number; max: number }
+  // Accept either scalar current or object with stats
+  current_a?: number | { min: number; avg: number; max: number }
   temperature_c?: number
   signal_strength_dbm?: number
   speed?: number
+  // Support both nested and flattened accel
   accel?: { x: number; y: number; z: number }
+  accel_x?: number
+  accel_y?: number
+  accel_z?: number
   power_kw?: number
   [key: string]: any
 }
@@ -39,45 +44,60 @@ export function downsampleData(
     return rawData as ApiDataItem[]
   }
 
-  const sortedData = [...rawData].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  )
+  // Group by device to avoid mixing device series during aggregation
+  const byDevice = new Map<string, RawDataItem[]>()
+  for (const item of rawData) {
+    const arr = byDevice.get(item.deviceID) || []
+    arr.push(item)
+    byDevice.set(item.deviceID, arr)
+  }
 
-  const timeRange = new Date(sortedData[sortedData.length - 1].timestamp).getTime() - 
-                   new Date(sortedData[0].timestamp).getTime()
-  
-  const interval = timeRange / (options.targetPoints - 1)
-  const downsampled: ApiDataItem[] = []
+  const results: ApiDataItem[] = []
 
-  for (let i = 0; i < options.targetPoints; i++) {
-    const targetTime = new Date(sortedData[0].timestamp).getTime() + (i * interval)
-    
-    // Find data points within the time window
-    const windowStart = targetTime - (interval / 2)
-    const windowEnd = targetTime + (interval / 2)
-    
-    const windowData = sortedData.filter(item => {
-      const itemTime = new Date(item.timestamp).getTime()
-      return itemTime >= windowStart && itemTime <= windowEnd
-    })
+  for (const [deviceID, deviceData] of byDevice) {
+    const sortedData = [...deviceData].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
 
-    if (windowData.length === 0) {
-      // If no data in window, use nearest point
-      const nearest = sortedData.reduce((prev, curr) => {
-        const prevTime = Math.abs(new Date(prev.timestamp).getTime() - targetTime)
-        const currTime = Math.abs(new Date(curr.timestamp).getTime() - targetTime)
-        return prevTime < currTime ? prev : curr
+    if (sortedData.length <= options.targetPoints) {
+      results.push(...(sortedData as ApiDataItem[]))
+      continue
+    }
+
+    const startMs = new Date(sortedData[0].timestamp).getTime()
+    const endMs = new Date(sortedData[sortedData.length - 1].timestamp).getTime()
+    const timeRange = Math.max(1, endMs - startMs)
+    const interval = timeRange / (options.targetPoints - 1)
+
+    for (let i = 0; i < options.targetPoints; i++) {
+      const targetTime = startMs + i * interval
+      const windowStart = targetTime - interval / 2
+      const windowEnd = targetTime + interval / 2
+
+      const windowData = sortedData.filter((item) => {
+        const t = new Date(item.timestamp).getTime()
+        return t >= windowStart && t <= windowEnd
       })
-      downsampled.push(nearest as ApiDataItem)
-    } else {
-      // Aggregate data in window
-      const aggregated = aggregateDataPoints(windowData, options.method)
-      aggregated.timestamp = new Date(targetTime).toISOString()
-      downsampled.push(aggregated as ApiDataItem)
+
+      if (windowData.length === 0) {
+        const nearest = sortedData.reduce((prev, curr) => {
+          const prevDt = Math.abs(new Date(prev.timestamp).getTime() - targetTime)
+          const currDt = Math.abs(new Date(curr.timestamp).getTime() - targetTime)
+          return prevDt < currDt ? prev : curr
+        })
+        results.push(nearest as ApiDataItem)
+      } else {
+        const aggregated = aggregateDataPoints(windowData, options.method)
+        aggregated.deviceID = deviceID
+        aggregated.timestamp = new Date(targetTime).toISOString()
+        results.push(aggregated as ApiDataItem)
+      }
     }
   }
 
-  return downsampled
+  // Keep global results sorted
+  results.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  return results
 }
 
 /**
@@ -92,7 +112,17 @@ function aggregateDataPoints(data: RawDataItem[], method: string): RawDataItem {
   }
 
   // Aggregate numeric fields
-  const numericFields = ['voltage_v', 'temperature_c', 'signal_strength_dbm', 'speed', 'power_kw']
+  const numericFields = [
+    'voltage_v',
+    'temperature_c',
+    'signal_strength_dbm',
+    'speed',
+    'power_kw',
+    'current_a',
+    // Common flattened fields we should preserve/aggregate
+    'accel_x', 'accel_y', 'accel_z',
+    'lat', 'lon', 'alt_m', 'heading_deg', 'speed_kmh', 'quality_avg'
+  ]
   
   numericFields.forEach(field => {
     const values = data.map(item => (item as any)[field]).filter(v => v !== undefined && v !== null)
@@ -144,8 +174,8 @@ function aggregateDataPoints(data: RawDataItem[], method: string): RawDataItem {
   }
 
   // Handle current_a object
-  if (data.some(item => item.current_a)) {
-    const currentData = data.filter(item => item.current_a)
+  if (data.some(item => item.current_a && typeof item.current_a === 'object')) {
+    const currentData = data.filter(item => item.current_a && typeof item.current_a === 'object')
     if (currentData.length > 0) {
       const currentFields = ['min', 'avg', 'max']
       result.current_a = {} as any
@@ -202,6 +232,86 @@ function aggregateDataPoints(data: RawDataItem[], method: string): RawDataItem {
   }
 
   return result
+}
+
+/**
+ * Normalize incoming raw records from various sources (IoT Core, Timestream, etc.)
+ * to the shape expected by charts and downsampling.
+ */
+export function normalizeRawData(input: any[]): RawDataItem[] {
+  return input.map(normalizeRawItem)
+}
+
+export function normalizeRawItem(rec: any): RawDataItem {
+  const ts = rec.timestamp
+  const timestampIso = typeof ts === 'number' ? new Date(ts).toISOString() : new Date(ts).toISOString()
+
+  // Voltage / current / temp
+  const voltage_v: number | undefined = rec.voltage_v ?? rec.voltage_V ?? undefined
+  const currentASrc: number | undefined = rec.current_a ?? rec.current_A ?? undefined
+  const temperature_c: number | undefined = rec.temperature_c ?? rec.temp_C ?? undefined
+
+  // Accel (flattened + nested)
+  const ax: number | undefined = rec.accel_x ?? rec.accel?.x
+  const ay: number | undefined = rec.accel_y ?? rec.accel?.y
+  const az: number | undefined = rec.accel_z ?? rec.accel?.z
+
+  // GNSS fields
+  const lat: number | undefined = rec.lat ?? rec.gnss_lat ?? rec.gnss?.lat
+  const lon: number | undefined = rec.lon ?? rec.gnss_lon ?? rec.gnss?.lon
+  const alt_m: number | undefined = rec.alt_m ?? rec.gnss_alt_m ?? rec.alt
+  const speed_m_s: number | undefined = rec.speed_m_s ?? rec.gnss_speed
+  const speed_kmh: number | undefined = rec.speed_kmh ?? (typeof speed_m_s === 'number' ? speed_m_s * 3.6 : undefined)
+  const heading_deg: number | undefined = rec.heading_deg ?? rec.gnss_heading
+  const quality_avg: number | undefined = rec.quality_avg ?? rec.hdop ?? rec.gnss_quality
+
+  // Power: use provided or compute
+  const power_kw: number | undefined = rec.power_kw ?? (
+    typeof voltage_v === 'number' && typeof currentASrc === 'number'
+      ? (voltage_v * currentASrc) / 1000.0
+      : undefined
+  )
+
+  const out: RawDataItem = {
+    deviceID: rec.deviceID,
+    timestamp: timestampIso,
+  }
+
+  if (typeof voltage_v === 'number') out.voltage_v = voltage_v
+  if (typeof currentASrc === 'number') out.current_a = currentASrc
+  if (typeof temperature_c === 'number') out.temperature_c = temperature_c
+  if (typeof power_kw === 'number') out.power_kw = power_kw
+
+  if (typeof ax === 'number') out.accel_x = ax
+  if (typeof ay === 'number') out.accel_y = ay
+  if (typeof az === 'number') out.accel_z = az
+  if (ax != null || ay != null || az != null) {
+    out.accel = { x: ax as any, y: ay as any, z: az as any }
+  }
+
+  if (
+    lat != null || lon != null || alt_m != null || speed_kmh != null || heading_deg != null || quality_avg != null
+  ) {
+    out.gnss = {
+      lat: lat as any,
+      lon: lon as any,
+      alt_m: alt_m as any,
+      speed_kmh: speed_kmh as any,
+      heading_deg: heading_deg as any,
+      quality_min: undefined as any, // unknown, keep slot for compatibility
+      quality_avg: quality_avg as any,
+    }
+
+    // Also expose flattened copies for chart fields that read top-level
+    if (lat != null) (out as any).lat = lat
+    if (lon != null) (out as any).lon = lon
+    if (alt_m != null) (out as any).alt_m = alt_m
+    if (heading_deg != null) (out as any).heading_deg = heading_deg
+    if (speed_kmh != null) (out as any).speed_kmh = speed_kmh
+    if (quality_avg != null) (out as any).quality_avg = quality_avg
+  }
+
+  return out
 }
 
 /**

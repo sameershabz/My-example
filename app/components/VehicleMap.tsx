@@ -89,8 +89,8 @@ function MapComponent({ devices }: VehicleMapProps) {
     mg.clearLayers()
     devices.forEach((device) => {
       const marker = L.marker([device.latitude, device.longitude]).bindPopup(`
-        <div>
-          <strong>${device.deviceId}</strong><br/>
+        <div style="color:#000;">
+          <strong style="color:#000;">${device.deviceId}</strong><br/>
           Timestamp: ${new Date(device.timestamp).toLocaleString()}<br/>
           Lat: ${device.latitude.toFixed(5)}<br/>
           Lon: ${device.longitude.toFixed(5)}<br/>

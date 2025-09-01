@@ -20,7 +20,7 @@ import dynamic from "next/dynamic"
 import type { ApiDataItem } from "./components/DataChart1"
 import type { DeviceData } from "./components/VehicleMap"
 import type { RawDataItem, DownsampleOptions } from "@/lib/data-processor"
-import { downsampleData } from "@/lib/data-processor"
+import { downsampleData, normalizeRawData } from "@/lib/data-processor"
 import { config } from "@/lib/config"
 import { useRouter } from "next/navigation"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
@@ -49,26 +49,21 @@ const timeRanges: { label: string; value: TimeRange }[] = [
   { label: "Custom", value: "custom" },
 ]
 
-// All fields on one level - no subcats
+// Data fields aligned with IoT Core SQL output (normalized)
 const allFields = [
   "voltage_v",
+  "current_a",
   "temperature_c",
-  "speed",
-  "speed_kmh",
-  "lat",
-  "lon",
-  "alt_m",
-  "heading_deg",
-  "quality_min",
-  "quality_avg",
-  "min",
-  "avg",
-  "max",
-  "signal_strength_dbm",
   "accel_x",
   "accel_y",
   "accel_z",
   "power_kw",
+  "lat",
+  "lon",
+  "alt_m",
+  "speed_kmh",
+  "heading_deg",
+  "quality_avg",
 ]
 
 // Updated command templates
@@ -163,9 +158,10 @@ export default function Home() {
       })
       .then((data) => {
         const rawDataArray = Array.isArray(data) ? data : [];
-        if (rawDataArray.length > 0) {
+        const normalized = normalizeRawData(rawDataArray)
+        if (normalized.length > 0) {
           const latestDataPerDevice = new Map<string, RawDataItem>();
-          for (const item of rawDataArray) {
+          for (const item of normalized) {
             const existing = latestDataPerDevice.get(item.deviceID);
             if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
               latestDataPerDevice.set(item.deviceID, item);
@@ -173,8 +169,8 @@ export default function Home() {
           }
           const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map(item => ({
             deviceId: item.deviceID,
-            latitude: item.gnss?.lat ?? 0,
-            longitude: item.gnss?.lon ?? 0,
+            latitude: item.gnss?.lat ?? (item as any).lat ?? 0,
+            longitude: item.gnss?.lon ?? (item as any).lon ?? 0,
             timestamp: item.timestamp,
             soc: (item as any).soc ?? 0,
             efficiency: (item as any).efficiency ?? 0,
@@ -220,8 +216,15 @@ export default function Home() {
     setError("")
 
     // Use epoch milliseconds instead of ISO strings for query params
-    const startTs = startDate.getTime().toString()
-    const endTs = endDate.getTime().toString()
+    const startMs = startDate.getTime()
+    const endMs = endDate.getTime()
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+      setLoading(false)
+      setError("Please select valid start and end dates.")
+      return
+    }
+    const startTs = Math.min(startMs, endMs).toString()
+    const endTs = Math.max(startMs, endMs).toString()
     const params = new URLSearchParams({
       start: startTs,
       end: endTs,
@@ -239,11 +242,12 @@ export default function Home() {
       })
       .then((json) => {
         const rawDataArray = Array.isArray(json) ? json : []
-        setRawData(rawDataArray)
+        const normalized = normalizeRawData(rawDataArray)
+        setRawData(normalized)
         
         // Downsample the raw data for chart display
-        if (rawDataArray.length > 0) {
-          const downsampled = downsampleData(rawDataArray, downsampleOptions)
+        if (normalized.length > 0) {
+          const downsampled = downsampleData(normalized, downsampleOptions)
           setDownsampledData(downsampled)
         } else {
           setDownsampledData([])

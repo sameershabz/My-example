@@ -11,6 +11,7 @@ import {
   YAxis,
   Legend,
   Tooltip,
+  Brush,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, EyeOff, Settings } from "lucide-react";
@@ -30,7 +31,7 @@ export interface ApiDataItem {
     heading_deg: number;
   };
   voltage_v?: number;
-  current_a?: { min: number; avg: number; max: number };
+  current_a?: number | { min: number; avg: number; max: number };
   temperature_c?: number;
   signal_strength_dbm?: number;
   speed?: number;
@@ -59,7 +60,7 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
       return;
     }
 
-    const fmt = timeFormat("%Y-%m-%d %H:%M");
+    const fmtTick = timeFormat("%Y-%m-%d %H:%M");
     const sorted = [...data].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -68,7 +69,8 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
 
     // build rows per timestamp
     const out = timestamps.map((ts) => {
-      const r: any = { dateStr: fmt(new Date(ts)) };
+      const tsMs = new Date(ts).getTime();
+      const r: any = { ts: tsMs, dateStr: fmtTick(new Date(ts)) };
       devices.forEach((dev) => {
         const item = sorted.find((d) => d.timestamp === ts && d.deviceID === dev);
         chartFields.forEach((f) => {
@@ -204,11 +206,13 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
               stroke="#e2e8f0" 
               strokeOpacity={0.5}
             />
-            <XAxis 
-              dataKey="dateStr" 
-              angle={-45} 
-              textAnchor="end" 
-              height={80}
+            <XAxis
+              dataKey="ts"
+              type="number"
+              domain={["auto", "auto"]}
+              scale="time"
+              height={60}
+              tickFormatter={(v: number) => timeFormat("%Y-%m-%d %H:%M")(new Date(v))}
               tick={{ fontSize: 12, fill: '#64748b' }}
               axisLine={{ stroke: '#e2e8f0' }}
               tickLine={{ stroke: '#e2e8f0' }}
@@ -228,6 +232,7 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
               }}
               itemStyle={{ color: "#f1f5f9" }}
               labelStyle={{ color: "#94a3b8" }}
+              labelFormatter={(label: number) => timeFormat("%Y-%m-%d %H:%M:%S.%L")(new Date(label))}
             />
             {showLegend && (
               <Legend
@@ -251,6 +256,7 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
                 hide={hidden.has(key)}
               />
             ))}
+            <Brush dataKey="ts" height={24} travellerWidth={10} stroke="#94a3b8" />
           </LineChart>
         </ResponsiveContainer>
       </div>

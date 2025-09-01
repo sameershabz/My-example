@@ -69,6 +69,14 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
+    const startMs = Number(start)
+    const endMs = Number(end)
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+      return NextResponse.json({
+        error: "Invalid start or end timestamp"
+      }, { status: 400 })
+    }
+
     // ── ④ get AWS raw data URL ──
     const awsRawDataUrl = process.env.AWS_RAW_DATA_URL
     if (!awsRawDataUrl) {
