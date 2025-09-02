@@ -243,8 +243,26 @@ export function normalizeRawData(input: any[]): RawDataItem[] {
 }
 
 export function normalizeRawItem(rec: any): RawDataItem {
-  const ts = rec.timestamp
-  const timestampIso = typeof ts === 'number' ? new Date(ts).toISOString() : new Date(ts).toISOString()
+  // Normalize timestamp: accepts ISO string, epoch seconds (10 digits), or epoch ms (13 digits)
+  const toEpochMs = (ts: any): number => {
+    if (ts === null || ts === undefined) return Date.now()
+    if (typeof ts === 'number') {
+      return ts < 1_000_000_000_000 ? ts * 1000 : ts
+    }
+    const s = String(ts).trim()
+    if (/^\d+$/.test(s)) {
+      if (s.length === 10) return parseInt(s, 10) * 1000
+      if (s.length === 13) return parseInt(s, 10)
+      const n = parseInt(s, 10)
+      return n < 1_000_000_000_000 ? n * 1000 : n
+    }
+    const d = new Date(s)
+    const ms = d.getTime()
+    return Number.isFinite(ms) ? ms : Date.now()
+  }
+
+  const tsMs = toEpochMs(rec.timestamp)
+  const timestampIso = new Date(tsMs).toISOString()
 
   // Voltage / current / temp
   const voltage_v: number | undefined = rec.voltage_v ?? rec.voltage_V ?? undefined

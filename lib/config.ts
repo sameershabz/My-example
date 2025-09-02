@@ -24,6 +24,12 @@ export const config = {
     revokeToken: "/api/revoke-token",
     rawData: "/api/raw-data",
   },
+  // Query behavior
+  query: {
+    // Optional UTC offset (hours) to shift start/end before sending to backend.
+    // Default 0. Set NEXT_PUBLIC_QUERY_UTC_OFFSET_HOURS=8 to shift window back 8h.
+    utcOffsetHours: Number(process.env.NEXT_PUBLIC_QUERY_UTC_OFFSET_HOURS || "0"),
+  },
 
   // External services
   external: {

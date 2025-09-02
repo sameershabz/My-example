@@ -11,6 +11,7 @@ import { CalendarIcon, RefreshCw, Plus, Trash, Loader2, Send, Settings, Filter, 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker"
 import TextField from "@mui/material/TextField"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -39,13 +40,25 @@ type ParamItem = {
   value: string
 }
 
-type TimeRange = "24hr" | "7d" | "1m" | "1y" | "all" | "custom"
+type TimeRange =
+  | "15m" | "1h" | "6h" | "12h" | "24hr" | "48h"
+  | "7d" | "14d" | "1m" | "3m" | "6m" | "1y"
+  | "max" | "custom"
+
 const timeRanges: { label: string; value: TimeRange }[] = [
+  { label: "15 Minutes", value: "15m" },
+  { label: "1 Hour", value: "1h" },
+  { label: "6 Hours", value: "6h" },
+  { label: "12 Hours", value: "12h" },
   { label: "24 Hours", value: "24hr" },
+  { label: "48 Hours", value: "48h" },
   { label: "7 Days", value: "7d" },
+  { label: "14 Days", value: "14d" },
   { label: "1 Month", value: "1m" },
+  { label: "3 Months", value: "3m" },
+  { label: "6 Months", value: "6m" },
   { label: "1 Year", value: "1y" },
-  { label: "All Time", value: "all" },
+  { label: "Max", value: "max" },
   { label: "Custom", value: "custom" },
 ]
 
@@ -135,6 +148,11 @@ export default function Home() {
   const [mapLoading, setMapLoading] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(5)
+  // Chart auto-refresh controls
+  const [autoRefreshChart, setAutoRefreshChart] = useState(false)
+  const [refreshIntervalChartSec, setRefreshIntervalChartSec] = useState(5)
+  const [refreshTick, setRefreshTick] = useState(0)
+  const [refreshingChart, setRefreshingChart] = useState(false)
   const [downsampleOptions, setDownsampleOptions] = useState<DownsampleOptions>({
     targetPoints: 100,
     method: 'average'
@@ -146,9 +164,10 @@ export default function Home() {
     const end = new Date();
     const start = new Date(end.getTime() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 months prior to now
 
+    const offsetMs = (config.query?.utcOffsetHours ?? 0) * 60 * 60 * 1000
     const params = new URLSearchParams({
-      start: start.getTime().toString(),
-      end: end.getTime().toString(),
+      start: (start.getTime() - offsetMs).toString(),
+      end: (end.getTime() - offsetMs).toString(),
     });
 
     fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
@@ -208,58 +227,94 @@ export default function Home() {
     }
   }, [autoRefresh, refreshIntervalSec, activeTab])
 
-  // Fetch raw data when date range changes
+  // Auto-refresh logic for the chart
   useEffect(() => {
-    if (!auth.isAuthenticated || !startDate || !endDate) return
+    let interval: NodeJS.Timeout
+    if (autoRefreshChart && activeTab === 'chart') {
+      interval = setInterval(() => {
+        console.log("Auto-refreshing chart data...")
+        setRefreshingChart(true)
+        setRefreshTick((t) => t + 1)
+      }, refreshIntervalChartSec * 1000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [autoRefreshChart, refreshIntervalChartSec, activeTab])
 
-    setLoading(true)
+  // Fetch raw data for chart
+  useEffect(() => {
+    if (!auth.isAuthenticated) return
+
     setError("")
 
-    // Use epoch milliseconds instead of ISO strings for query params
-    const startMs = startDate.getTime()
-    const endMs = endDate.getTime()
+    // Compute fetch window: dynamic for non-custom, from state for custom
+    const now = Date.now()
+    let startMs: number
+    let endMs: number
+    if (timeRange === 'custom') {
+      if (!startDate || !endDate) return
+      startMs = startDate.getTime()
+      endMs = endDate.getTime()
+    } else {
+      endMs = now
+      switch (timeRange) {
+        case '15m': startMs = endMs - 15 * 60 * 1000; break
+        case '1h': startMs = endMs - 60 * 60 * 1000; break
+        case '6h': startMs = endMs - 6 * 60 * 60 * 1000; break
+        case '12h': startMs = endMs - 12 * 60 * 60 * 1000; break
+        case '24hr': startMs = endMs - 24 * 60 * 60 * 1000; break
+        case '48h': startMs = endMs - 48 * 60 * 60 * 1000; break
+        case '7d': startMs = endMs - 7 * 24 * 60 * 60 * 1000; break
+        case '14d': startMs = endMs - 14 * 24 * 60 * 60 * 1000; break
+        case '1m': startMs = endMs - 30 * 24 * 60 * 60 * 1000; break
+        case '3m': startMs = endMs - 90 * 24 * 60 * 60 * 1000; break
+        case '6m': startMs = endMs - 180 * 24 * 60 * 60 * 1000; break
+        case '1y': startMs = endMs - 365 * 24 * 60 * 60 * 1000; break
+        case 'max': startMs = 0; break
+        default: startMs = endMs - 30 * 24 * 60 * 60 * 1000; break
+      }
+    }
+
+    const silent = refreshingChart
+    if (!silent) setLoading(true)
+
+    const offsetMs = (config.query?.utcOffsetHours ?? 0) * 60 * 60 * 1000
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
-      setLoading(false)
+      if (!silent) setLoading(false)
+      setRefreshingChart(false)
       setError("Please select valid start and end dates.")
       return
     }
-    const startTs = Math.min(startMs, endMs).toString()
-    const endTs = Math.max(startMs, endMs).toString()
-    const params = new URLSearchParams({
-      start: startTs,
-      end: endTs,
-    })
-    
-    // Fetch raw data instead of downsampled data
-    fetch(`${config.api.rawData}?${params}`, {
-      credentials: "include",
-    })
+    const startTs = (Math.min(startMs, endMs) - offsetMs).toString()
+    const endTs = (Math.max(startMs, endMs) - offsetMs).toString()
+    const params = new URLSearchParams({ start: startTs, end: endTs })
+
+    fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
       .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Raw data API ${res.status}: ${await res.text()}`)
-        }
+        if (!res.ok) throw new Error(`Raw data API ${res.status}: ${await res.text()}`)
         return res.json()
       })
       .then((json) => {
         const rawDataArray = Array.isArray(json) ? json : []
         const normalized = normalizeRawData(rawDataArray)
         setRawData(normalized)
-        
-        // Downsample the raw data for chart display
         if (normalized.length > 0) {
           const downsampled = downsampleData(normalized, downsampleOptions)
           setDownsampledData(downsampled)
         } else {
           setDownsampledData([])
         }
-        setLoading(false)
+        if (!silent) setLoading(false)
+        setRefreshingChart(false)
       })
       .catch((err) => {
         console.error("Raw data fetch error:", err)
         setError(err.message)
-        setLoading(false)
+        if (!silent) setLoading(false)
+        setRefreshingChart(false)
       })
-  }, [auth.isAuthenticated, startDate, endDate, downsampleOptions])
+  }, [auth.isAuthenticated, startDate, endDate, timeRange, downsampleOptions, refreshTick, refreshingChart])
 
   // Handle time range changes
   useEffect(() => {
@@ -268,20 +323,44 @@ export default function Home() {
     let end: Date = now
 
     switch (timeRange) {
+      case "15m":
+        start = new Date(now.getTime() - 15 * 60 * 1000)
+        break
+      case "1h":
+        start = new Date(now.getTime() - 60 * 60 * 1000)
+        break
+      case "6h":
+        start = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+        break
+      case "12h":
+        start = new Date(now.getTime() - 12 * 60 * 60 * 1000)
+        break
       case "24hr":
         start = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        break
+      case "48h":
+        start = new Date(now.getTime() - 48 * 60 * 60 * 1000)
         break
       case "7d":
         start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
         break
+      case "14d":
+        start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+        break
       case "1m":
         start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case "3m":
+        start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+        break
+      case "6m":
+        start = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
         break
       case "1y":
         start = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
         break
-      case "all":
-        start = new Date(0) // Beginning of time
+      case "max":
+        start = new Date(0)
         break
       case "custom":
         // Don't change dates for custom - let user set them
@@ -507,8 +586,8 @@ export default function Home() {
 {timeRange === "custom" && (
   <>
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <DatePicker
-        label="Start Date"
+      <DateTimePicker
+        label="Start Date & Time"
         value={startDate}
         onChange={(newVal) => setStartDate(newVal)}
         slotProps={{
@@ -534,8 +613,8 @@ export default function Home() {
       />
     </LocalizationProvider>
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <DatePicker
-        label="End Date"
+      <DateTimePicker
+        label="End Date & Time"
         value={endDate}
         onChange={(newVal) => setEndDate(newVal)}
         slotProps={{
@@ -647,6 +726,46 @@ export default function Home() {
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
+
+                  {/* Chart Display */}
+                  {/* Chart Refresh Controls */}
+                  <div className="flex items-center justify-end gap-4 mt-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checkedTrackColor="bg-blue-500"
+                        uncheckedTrackColor="bg-gray-300"
+                        thumbColor="bg-blue-500"
+                        checked={autoRefreshChart}
+                        onCheckedChange={setAutoRefreshChart}
+                        id="auto-refresh-chart"
+                      />
+                      <Label htmlFor="auto-refresh-chart" className="text-sm text-slate-700 dark:text-slate-300">Auto Refresh</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="refresh-interval-chart" className="text-sm text-slate-700 dark:text-slate-300">Interval (s):</Label>
+                      <Input
+                        id="refresh-interval-chart"
+                        type="number"
+                        min="1"
+                        value={refreshIntervalChartSec}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10)
+                          if (!isNaN(val) && val > 0) setRefreshIntervalChartSec(val)
+                        }}
+                        className="w-20"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setRefreshingChart(true); setRefreshTick(t => t + 1) }}
+                      disabled={loading || refreshingChart}
+                      className="flex items-center space-x-2"
+                    >
+                      {loading || refreshingChart ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      <span>Refresh</span>
+                    </Button>
+                  </div>
 
                   {/* Chart Display */}
                   <div className="mt-8">

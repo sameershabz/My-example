@@ -17,9 +17,30 @@ interface VehicleMapProps {
 }
 
 function MapComponent({ devices }: VehicleMapProps) {
+  // Force display timezone (UTC+8)
+  const DISPLAY_TIMEZONE = "Asia/Singapore"
+
   const mapRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const markerGroupRef = useRef<any>(null)
+
+  // Normalize timestamps: supports ISO strings, epoch seconds (10 digits), or epoch ms (13 digits)
+  const toEpochMs = (ts: string | number): number => {
+    if (ts === null || ts === undefined) return Date.now()
+    if (typeof ts === 'number') {
+      return ts < 1_000_000_000_000 ? ts * 1000 : ts
+    }
+    const s = String(ts).trim()
+    if (/^\d+$/.test(s)) {
+      if (s.length === 10) return parseInt(s, 10) * 1000
+      if (s.length === 13) return parseInt(s, 10)
+      const n = parseInt(s, 10)
+      return n < 1_000_000_000_000 ? n * 1000 : n
+    }
+    const d = new Date(s)
+    const ms = d.getTime()
+    return Number.isFinite(ms) ? ms : Date.now()
+  }
 
   useEffect(() => {
     let L: any = null
@@ -88,10 +109,11 @@ function MapComponent({ devices }: VehicleMapProps) {
 
     mg.clearLayers()
     devices.forEach((device) => {
+      const tsMs = toEpochMs(device.timestamp)
       const marker = L.marker([device.latitude, device.longitude]).bindPopup(`
         <div style="color:#000;">
           <strong style="color:#000;">${device.deviceId}</strong><br/>
-          Timestamp: ${new Date(device.timestamp).toLocaleString()}<br/>
+          Timestamp: ${new Date(tsMs).toLocaleString(undefined, { timeZone: DISPLAY_TIMEZONE, hour12: false })}<br/>
           Lat: ${device.latitude.toFixed(5)}<br/>
           Lon: ${device.longitude.toFixed(5)}<br/>
           SoC: ${device.soc}%<br/>

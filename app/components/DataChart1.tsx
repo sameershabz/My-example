@@ -18,6 +18,9 @@ import { Download, Eye, EyeOff, Settings } from "lucide-react";
 import { dataToCSV } from "@/lib/data-processor";
 import type { RawDataItem } from "@/lib/data-processor";
 
+// Force display timezone (UTC+8)
+const DISPLAY_TIMEZONE = "Asia/Singapore";
+
 export interface ApiDataItem {
   deviceID: string;
   timestamp: string;
@@ -212,7 +215,11 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
               domain={["auto", "auto"]}
               scale="time"
               height={60}
-              tickFormatter={(v: number) => timeFormat("%Y-%m-%d %H:%M")(new Date(v))}
+              tickFormatter={(v: number) => new Date(v).toLocaleString(undefined, {
+                timeZone: DISPLAY_TIMEZONE,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hour12: false,
+              })}
               tick={{ fontSize: 12, fill: '#64748b' }}
               axisLine={{ stroke: '#e2e8f0' }}
               tickLine={{ stroke: '#e2e8f0' }}
@@ -232,7 +239,13 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
               }}
               itemStyle={{ color: "#f1f5f9" }}
               labelStyle={{ color: "#94a3b8" }}
-              labelFormatter={(label: number) => timeFormat("%Y-%m-%d %H:%M:%S.%L")(new Date(label))}
+              labelFormatter={(label: number) => new Date(label).toLocaleString(undefined, {
+                timeZone: DISPLAY_TIMEZONE,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                fractionalSecondDigits: 3,
+                hour12: false,
+              })}
             />
             {showLegend && (
               <Legend
