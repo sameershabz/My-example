@@ -25,7 +25,7 @@ export default function SignIn() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
       <Card className="w-full max-w-md shadow-2xl border-0 bg-card">
         <CardHeader className="space-y-2 text-center pb-6">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold text-foreground">
             Telematics Hub
           </CardTitle>
           <CardDescription className="text-base">Sign in to access your dashboard</CardDescription>

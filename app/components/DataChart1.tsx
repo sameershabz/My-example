@@ -1,6 +1,6 @@
 // components/DataChart1.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { timeFormat } from "d3-time-format";
 import {
   ResponsiveContainer,
@@ -14,12 +14,35 @@ import {
   Brush,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Download, Eye, EyeOff, Settings } from "lucide-react";
+import { Download, Eye, EyeOff, Settings, Info } from "lucide-react";
 import { dataToCSV } from "@/lib/data-processor";
 import type { RawDataItem } from "@/lib/data-processor";
 
 // Force display timezone (UTC+8)
 const DISPLAY_TIMEZONE = "Asia/Singapore";
+
+// Field units mapping
+const FIELD_UNITS: Record<string, string> = {
+  voltage_v: "V",
+  current_a: "A",
+  temperature_c: "°C",
+  signal_strength_dbm: "dBm",
+  speed: "km/h",
+  speed_kmh: "km/h",
+  power_kw: "kW",
+  lat: "°",
+  lon: "°",
+  alt_m: "m",
+  heading_deg: "°",
+  quality_min: "",
+  quality_avg: "",
+  accel_x: "g",
+  accel_y: "g",
+  accel_z: "g",
+  min: "A",
+  avg: "A",
+  max: "A",
+};
 
 export interface ApiDataItem {
   deviceID: string;
@@ -55,6 +78,26 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
   const [rows, setRows] = useState<any[]>([]);
   const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
   const [showLegend, setShowLegend] = useState(true);
+  const [showDownloadInfo, setShowDownloadInfo] = useState(false);
+  const [brushRange, setBrushRange] = useState<[number, number] | null>(null);
+  const infoRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close info tooltip
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
+        setShowDownloadInfo(false);
+      }
+    };
+
+    if (showDownloadInfo) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDownloadInfo]);
 
   useEffect(() => {
     if (!data.length) {
@@ -143,6 +186,22 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
     return colors[i % colors.length];
   };
 
+  const formatLegendName = (key: string) => {
+    const [device, field] = key.split('-');
+    const unit = FIELD_UNITS[field] || '';
+    return `${device} - ${field}${unit ? ` (${unit})` : ''}`;
+  };
+
+  const handleBrushChange = (brushData: any) => {
+    if (brushData && brushData.startIndex !== undefined && brushData.endIndex !== undefined) {
+      const startTime = rows[brushData.startIndex]?.ts;
+      const endTime = rows[brushData.endIndex]?.ts;
+      if (startTime && endTime) {
+        setBrushRange([startTime, endTime]);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -184,16 +243,39 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
             {showLegend ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             <span className="ml-2">Legend</span>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadCSV}
-            disabled={!rawData || rawData.length === 0}
-            className="h-8 px-3"
-          >
-            <Download className="h-4 w-4" />
-            <span className="ml-2">Download CSV</span>
-          </Button>
+          <div className="relative" ref={infoRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadCSV}
+              disabled={!rawData || rawData.length === 0}
+              className="h-8 px-3"
+            >
+              <Download className="h-4 w-4" />
+              <span className="ml-2">Download CSV</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDownloadInfo(!showDownloadInfo)}
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+            {showDownloadInfo && (
+              <div className="absolute top-10 left-0 z-50 w-80 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg">
+                <div className="text-sm text-slate-700 dark:text-slate-300">
+                  <p className="font-medium mb-2">CSV Download Information:</p>
+                  <ul className="space-y-1 text-xs">
+                    <li>• Downloads data for the current time range</li>
+                    <li>• Includes all devices and telemetry fields</li>
+                    <li>• Data is not filtered by current chart selections</li>
+                    <li>• Contains raw data points (not downsampled)</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="text-sm text-slate-500 dark:text-slate-400">
           {rows.length} data points • {seriesKeys.length} series
@@ -243,7 +325,6 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
                 timeZone: DISPLAY_TIMEZONE,
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
-                fractionalSecondDigits: 3,
                 hour12: false,
               })}
             />
@@ -260,7 +341,7 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
               <Line
                 key={key}
                 dataKey={key}
-                name={key}
+                name={formatLegendName(key)}
                 stroke={getColor(i)}
                 strokeWidth={2}
                 connectNulls
@@ -269,7 +350,19 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
                 hide={hidden.has(key)}
               />
             ))}
-            <Brush dataKey="ts" height={24} travellerWidth={10} stroke="#94a3b8" />
+            <Brush 
+              dataKey="ts" 
+              height={32} 
+              travellerWidth={12}
+              onChange={handleBrushChange}
+              startIndex={brushRange ? rows.findIndex(r => r.ts >= brushRange[0]) : undefined}
+              endIndex={brushRange ? rows.findIndex(r => r.ts >= brushRange[1]) : undefined}
+              fill="rgba(59, 130, 246, 0.1)"
+              stroke="rgba(59, 130, 246, 0.8)"
+              strokeWidth={2}
+              fillOpacity={0.3}
+              tickFormatter={() => ""}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

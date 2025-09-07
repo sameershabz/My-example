@@ -332,6 +332,29 @@ export function normalizeRawItem(rec: any): RawDataItem {
   return out
 }
 
+// Field units mapping for CSV headers
+const CSV_FIELD_UNITS: Record<string, string> = {
+  voltage_v: "V",
+  current_a: "A",
+  temperature_c: "°C",
+  signal_strength_dbm: "dBm",
+  speed: "km/h",
+  speed_kmh: "km/h",
+  power_kw: "kW",
+  lat: "°",
+  lon: "°",
+  alt_m: "m",
+  heading_deg: "°",
+  quality_min: "",
+  quality_avg: "",
+  accel_x: "g",
+  accel_y: "g",
+  accel_z: "g",
+  min: "A",
+  avg: "A",
+  max: "A",
+};
+
 /**
  * Converts data to CSV format for download
  */
@@ -350,8 +373,15 @@ export function dataToCSV(data: RawDataItem[]): string {
 
   const fields = ['deviceID', 'timestamp', ...Array.from(allFields).sort()]
   
-  // Create CSV header
-  const header = fields.join(',')
+  // Create CSV header with units
+  const headerFields = fields.map(field => {
+    if (field === 'deviceID') return 'deviceID'
+    if (field === 'timestamp') return 'timestamp (UTC)'
+    
+    const unit = CSV_FIELD_UNITS[field] || ''
+    return `${field}${unit ? ` (${unit})` : ''}`
+  })
+  const header = headerFields.join(',')
   
   // Create CSV rows
   const rows = data.map(item => {
@@ -362,8 +392,18 @@ export function dataToCSV(data: RawDataItem[]): string {
       const value = (item as any)[field]
       if (value === undefined || value === null) return ''
       
+      // Handle nested objects (like gnss, accel, current_a)
       if (typeof value === 'object') {
-        return `"${JSON.stringify(value)}"`
+        // For acceleration fields, extract individual values instead of JSON
+        if (field === 'accel' && value.x !== undefined && value.y !== undefined && value.z !== undefined) {
+          return `"${value.x},${value.y},${value.z}"`
+        }
+        // For other objects, use JSON but clean up braces for specific fields
+        const jsonStr = JSON.stringify(value)
+        if (field.startsWith('accel_') || field === 'accel') {
+          return `"${jsonStr.replace(/[{}]/g, '')}"`
+        }
+        return `"${jsonStr}"`
       }
       
       return `"${value}"`

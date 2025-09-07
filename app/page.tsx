@@ -159,7 +159,7 @@ export default function Home() {
   })
 
   // DECOUPLED: Fetches the last month of data specifically for the map
-  const fetchMapData = () => {
+  const fetchMapData = (retryCount = 0) => {
     setMapLoading(true);
     const end = new Date();
     const start = new Date(end.getTime() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 months prior to now
@@ -203,13 +203,27 @@ export default function Home() {
         console.error("Failed to fetch map data:", err);
         setError(err.message); // You might want a separate mapError state
       })
-      .finally(() => setMapLoading(false));
+      .finally(() => {
+        setMapLoading(false);
+        
+        // Auto-retry once if this was the first attempt and we got no data
+        if (retryCount === 0 && latestData.length === 0) {
+          setTimeout(() => {
+            console.log("Auto-retrying map data fetch...");
+            fetchMapData(1);
+          }, 1000);
+        }
+      });
   };
 
-  // Initial data fetch for the map
+  // Initial data fetch for the map - do two refreshes at startup
   useEffect(() => {
     if (auth.isAuthenticated) {
       fetchMapData();
+      // Second refresh after a short delay to ensure map loads properly
+      setTimeout(() => {
+        fetchMapData();
+      }, 2000);
     }
   }, [auth.isAuthenticated]);
 
@@ -314,7 +328,7 @@ export default function Home() {
         if (!silent) setLoading(false)
         setRefreshingChart(false)
       })
-  }, [auth.isAuthenticated, startDate, endDate, timeRange, downsampleOptions, refreshTick, refreshingChart])
+  }, [auth.isAuthenticated, startDate, endDate, timeRange, downsampleOptions, refreshTick])
 
   // Handle time range changes
   useEffect(() => {
@@ -823,7 +837,10 @@ export default function Home() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={fetchMapData}
+                        onClick={() => {
+                          fetchMapData();
+                          setTimeout(() => fetchMapData(), 1000);
+                        }}
                         disabled={mapLoading}
                         className="flex items-center space-x-2"
                       >
@@ -853,7 +870,10 @@ export default function Home() {
                         </p>
                         <Button
                           variant="outline"
-                          onClick={fetchMapData}
+                          onClick={() => {
+                            fetchMapData();
+                            setTimeout(() => fetchMapData(), 1000);
+                          }}
                           disabled={mapLoading}
                           className="mt-4 flex items-center space-x-2"
                         >
