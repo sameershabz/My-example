@@ -117,7 +117,7 @@ function MapComponent({ devices }: VehicleMapProps) {
           Lat: ${device.latitude.toFixed(5)}<br/>
           Lon: ${device.longitude.toFixed(5)}<br/>
           SoC: ${device.soc}%<br/>
-          Efficiency: ${device.efficiency}%
+          Efficiency: ${device.efficiency.toFixed(1)} km/kWh
         </div>
       `)
       marker.addTo(mg)

@@ -1,6 +1,6 @@
 // components/DataChart1.tsx
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { timeFormat } from "d3-time-format";
 import {
   ResponsiveContainer,
@@ -18,16 +18,14 @@ import { Download, Eye, EyeOff, Settings, Info } from "lucide-react";
 import { dataToCSV } from "@/lib/data-processor";
 import type { RawDataItem } from "@/lib/data-processor";
 
-// Force display timezone (UTC+8)
-const DISPLAY_TIMEZONE = "Asia/Singapore";
+// Force display timezone to UTC/GMT
+const DISPLAY_TIMEZONE = "UTC";
 
 // Field units mapping
 const FIELD_UNITS: Record<string, string> = {
   voltage_v: "V",
   current_a: "A",
   temperature_c: "°C",
-  signal_strength_dbm: "dBm",
-  speed: "km/h",
   speed_kmh: "km/h",
   power_kw: "kW",
   lat: "°",
@@ -39,6 +37,8 @@ const FIELD_UNITS: Record<string, string> = {
   accel_x: "g",
   accel_y: "g",
   accel_z: "g",
+  lte_ok: "",
+  gnss_ok: "",
   min: "A",
   avg: "A",
   max: "A",
@@ -59,8 +59,6 @@ export interface ApiDataItem {
   voltage_v?: number;
   current_a?: number | { min: number; avg: number; max: number };
   temperature_c?: number;
-  signal_strength_dbm?: number;
-  speed?: number;
   accel?: { x: number; y: number; z: number };
   power_kw?: number;
   [key: string]: any;
@@ -71,15 +69,72 @@ interface DataChart1Props {
   chartFields: string[];
   loading: boolean;
   rawData?: RawDataItem[]; // Raw data for CSV export
+  autoRange?: boolean; // controls X-axis autorange
+  xDomain?: [number, number] | null; // explicit domain when autoRange is false
+  lastReceivedAtMs?: number | null; // when the latest batch arrived on frontend
 }
 
-export default function DataChart1({ data, chartFields, loading, rawData }: DataChart1Props) {
+const BrushLine = (props: any) => {
+  const { x, y, width, height } = props;
+  const cy = y + height / 2;
+  return (
+    <g>
+      <line x1={x} y1={cy} x2={x + width} y2={cy} stroke="#3b82f6" strokeWidth={3}/>
+    </g>
+  );
+};
+
+const CustomBrush = (props: any) => {
+  const { x, y, width, height, onDragStartLeft, onDragStartRight } = props;
+
+  const cy = y + height / 2;
+
+  return (
+    <g>
+      {/* Connecting line between handles */}
+      <line
+        x1={x}
+        y1={cy}
+        x2={x + width}
+        y2={cy}
+        stroke="#3b82f6"
+        strokeWidth={3}
+        strokeDasharray="4 2" // optional, makes dashed
+      />
+      {/* Left handle as larger circle */}
+      <circle
+        cx={x}
+        cy={cy}
+        r={14} // bigger than before
+        fill="#3b82f6"
+        stroke="#fff"
+        strokeWidth={3}
+        cursor="ew-resize"
+        onMouseDown={onDragStartLeft}
+      />
+      {/* Right handle as larger circle */}
+      <circle
+        cx={x + width}
+        cy={cy}
+        r={14}
+        fill="#3b82f6"
+        stroke="#fff"
+        strokeWidth={3}
+        cursor="ew-resize"
+        onMouseDown={onDragStartRight}
+      />
+    </g>
+  );
+};
+
+export default function DataChart1({ data, chartFields, loading, rawData, autoRange = true, xDomain = null, lastReceivedAtMs = null }: DataChart1Props) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState<any[]>([]);
   const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
   const [showLegend, setShowLegend] = useState(true);
   const [showDownloadInfo, setShowDownloadInfo] = useState(false);
   const [brushRange, setBrushRange] = useState<[number, number] | null>(null);
+  const [showDelay, setShowDelay] = useState(false);
   const infoRef = useRef<HTMLDivElement>(null);
 
   // Handle click outside to close info tooltip
@@ -151,6 +206,29 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
     hidden.has(key) ? s.delete(key) : s.add(key);
     setHidden(s);
   };
+
+  // Latest transport delay (receive time - last sample ts) in seconds
+  const lastTransportDelaySeconds = useMemo(() => {
+    if (!rows.length) return null;
+    if (!lastReceivedAtMs) return null;
+    const lastTs = rows[rows.length - 1]?.ts;
+    if (!lastTs) return null;
+    return (lastReceivedAtMs - lastTs) / 1000;
+  }, [rows, lastReceivedAtMs, showDelay]);
+
+  // UI delay (render time - receive time) in milliseconds
+  const lastUiDelayMs = useMemo(() => {
+    if (!lastReceivedAtMs) return null;
+    return Date.now() - lastReceivedAtMs;
+  }, [lastReceivedAtMs, showDelay]);
+
+  // Total end-to-end delay (render time - last sample ts) in seconds
+  const lastTotalDelaySeconds = useMemo(() => {
+    if (!rows.length) return null;
+    const lastTs = rows[rows.length - 1]?.ts;
+    if (!lastTs) return null;
+    return (Date.now() - lastTs) / 1000;
+  }, [rows, showDelay]);
 
   const handleDownloadCSV = () => {
     if (!rawData || rawData.length === 0) {
@@ -294,7 +372,7 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
             <XAxis
               dataKey="ts"
               type="number"
-              domain={["auto", "auto"]}
+              domain={autoRange || !xDomain ? ["auto", "auto"] : [xDomain[0], xDomain[1]]}
               scale="time"
               height={60}
               tickFormatter={(v: number) => new Date(v).toLocaleString(undefined, {
@@ -350,21 +428,56 @@ export default function DataChart1({ data, chartFields, loading, rawData }: Data
                 hide={hidden.has(key)}
               />
             ))}
-            <Brush 
-              dataKey="ts" 
-              height={32} 
-              travellerWidth={12}
-              onChange={handleBrushChange}
-              startIndex={brushRange ? rows.findIndex(r => r.ts >= brushRange[0]) : undefined}
-              endIndex={brushRange ? rows.findIndex(r => r.ts >= brushRange[1]) : undefined}
-              fill="rgba(59, 130, 246, 0.1)"
-              stroke="rgba(59, 130, 246, 0.8)"
-              strokeWidth={2}
-              fillOpacity={0.3}
-              tickFormatter={() => ""}
-            />
+              <Brush
+                dataKey="ts"
+                height={36}
+                travellerWidth={28}            // larger hit target
+                fill="#00000000"             // hide grey bar
+                stroke="#333"
+                onChange={handleBrushChange}
+                // content={<BrushLine />}        // just draws the line between handles
+                tickFormatter={() => ""}
+              />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+      {/* Delay viewer under the chart */}
+      <div className="flex justify-center items-center space-x-3">
+        <Button
+          variant={showDelay ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowDelay((v) => !v)}
+          className="h-8 px-3"
+        >
+          {showDelay ? "Hide Delay" : "View Delay"}
+        </Button>
+        {showDelay && (
+          <span className="text-sm text-slate-700 dark:text-slate-200 tabular-nums">
+            {lastTotalDelaySeconds != null && (
+              <>
+                Total: {lastTotalDelaySeconds < 10
+                  ? `${lastTotalDelaySeconds.toFixed(1)} s`
+                  : `${Math.round(lastTotalDelaySeconds)} s`}
+              </>
+            )}
+            {lastTotalDelaySeconds != null && (lastTransportDelaySeconds != null || lastUiDelayMs != null) && ' • '}
+            {lastTransportDelaySeconds != null && (
+              <>
+                Net: {lastTransportDelaySeconds < 10
+                  ? `${lastTransportDelaySeconds.toFixed(1)} s`
+                  : `${Math.round(lastTransportDelaySeconds)} s`}
+              </>
+            )}
+            {lastTransportDelaySeconds != null && lastUiDelayMs != null && ' • '}
+            {lastUiDelayMs != null && (
+              <>
+                UI: {lastUiDelayMs < 1000
+                  ? `${Math.round(lastUiDelayMs)} ms`
+                  : `${(lastUiDelayMs / 1000 < 10 ? (lastUiDelayMs / 1000).toFixed(1) : Math.round(lastUiDelayMs / 1000))} s`}
+              </>
+            )}
+          </span>
+        )}
       </div>
     </div>
   );

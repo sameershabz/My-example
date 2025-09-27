@@ -16,14 +16,15 @@ export interface RawDataItem {
   // Accept either scalar current or object with stats
   current_a?: number | { min: number; avg: number; max: number }
   temperature_c?: number
-  signal_strength_dbm?: number
-  speed?: number
   // Support both nested and flattened accel
   accel?: { x: number; y: number; z: number }
   accel_x?: number
   accel_y?: number
   accel_z?: number
   power_kw?: number
+  // Flags
+  lte_ok?: number | boolean
+  gnss_ok?: number | boolean
   [key: string]: any
 }
 
@@ -115,18 +116,24 @@ function aggregateDataPoints(data: RawDataItem[], method: string): RawDataItem {
   const numericFields = [
     'voltage_v',
     'temperature_c',
-    'signal_strength_dbm',
-    'speed',
     'power_kw',
     'current_a',
     // Common flattened fields we should preserve/aggregate
     'accel_x', 'accel_y', 'accel_z',
-    'lat', 'lon', 'alt_m', 'heading_deg', 'speed_kmh', 'quality_avg'
+    'lat', 'lon', 'alt_m', 'heading_deg', 'speed_kmh', 'quality_avg',
+    // flags treated as numeric 0/1 for charting
+    'lte_ok',
+    'gnss_ok'
   ]
   
   numericFields.forEach(field => {
     const values = data.map(item => (item as any)[field]).filter(v => v !== undefined && v !== null)
     if (values.length > 0) {
+      // Special-case: lte_ok / gnss_ok are binary; we always take MIN (0 if any failure)
+      if (field === 'lte_ok' || field === 'gnss_ok') {
+        ;(result as any)[field] = Math.min(...values)
+        return
+      }
       switch (method) {
         case 'average':
           (result as any)[field] = values.reduce((a, b) => a + b, 0) / values.length
@@ -261,6 +268,17 @@ export function normalizeRawItem(rec: any): RawDataItem {
     return Number.isFinite(ms) ? ms : Date.now()
   }
 
+  const toBinary = (value: any): number | undefined => {
+    if (value === undefined || value === null) return undefined
+    if (typeof value === 'boolean') return value ? 1 : 0
+    if (typeof value === 'number') return value === 0 ? 0 : 1
+    const str = String(value).trim().toLowerCase()
+    if (str === '' || str === 'null') return undefined
+    if (['0', 'false', 'no', 'off'].includes(str)) return 0
+    if (['1', 'true', 'yes', 'on'].includes(str)) return 1
+    return 1
+  }
+
   const tsMs = toEpochMs(rec.timestamp)
   const timestampIso = new Date(tsMs).toISOString()
 
@@ -290,6 +308,12 @@ export function normalizeRawItem(rec: any): RawDataItem {
       : undefined
   )
 
+  // Flags -> normalize to 0/1
+  const lte_ok: number | undefined = toBinary(rec.lte_ok)
+  const gnss_ok: number | undefined = toBinary(
+    rec.gnss_ok ?? rec.gnss_fix ?? rec.extra?.gnss_fix
+  )
+
   const out: RawDataItem = {
     deviceID: rec.deviceID,
     timestamp: timestampIso,
@@ -299,6 +323,8 @@ export function normalizeRawItem(rec: any): RawDataItem {
   if (typeof currentASrc === 'number') out.current_a = currentASrc
   if (typeof temperature_c === 'number') out.temperature_c = temperature_c
   if (typeof power_kw === 'number') out.power_kw = power_kw
+  if (typeof lte_ok === 'number') (out as any).lte_ok = lte_ok
+  if (typeof gnss_ok === 'number') (out as any).gnss_ok = gnss_ok
 
   if (typeof ax === 'number') out.accel_x = ax
   if (typeof ay === 'number') out.accel_y = ay
@@ -337,8 +363,6 @@ const CSV_FIELD_UNITS: Record<string, string> = {
   voltage_v: "V",
   current_a: "A",
   temperature_c: "°C",
-  signal_strength_dbm: "dBm",
-  speed: "km/h",
   speed_kmh: "km/h",
   power_kw: "kW",
   lat: "°",
@@ -350,6 +374,8 @@ const CSV_FIELD_UNITS: Record<string, string> = {
   accel_x: "g",
   accel_y: "g",
   accel_z: "g",
+  lte_ok: "",
+  gnss_ok: "",
   min: "A",
   avg: "A",
   max: "A",

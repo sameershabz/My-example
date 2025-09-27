@@ -41,11 +41,15 @@ type ParamItem = {
 }
 
 type TimeRange =
+  | "1min" | "3min" | "5min"
   | "15m" | "1h" | "6h" | "12h" | "24hr" | "48h"
-  | "7d" | "14d" | "1m" | "3m" | "6m" | "1y"
+  | "7d" | "1m" | "3m" | "1y"
   | "max" | "custom"
 
 const timeRanges: { label: string; value: TimeRange }[] = [
+  { label: "1 Minute", value: "1min" },
+  { label: "3 Minutes", value: "3min" },
+  { label: "5 Minutes", value: "5min" },
   { label: "15 Minutes", value: "15m" },
   { label: "1 Hour", value: "1h" },
   { label: "6 Hours", value: "6h" },
@@ -53,10 +57,8 @@ const timeRanges: { label: string; value: TimeRange }[] = [
   { label: "24 Hours", value: "24hr" },
   { label: "48 Hours", value: "48h" },
   { label: "7 Days", value: "7d" },
-  { label: "14 Days", value: "14d" },
   { label: "1 Month", value: "1m" },
   { label: "3 Months", value: "3m" },
-  { label: "6 Months", value: "6m" },
   { label: "1 Year", value: "1y" },
   { label: "Max", value: "max" },
   { label: "Custom", value: "custom" },
@@ -77,6 +79,9 @@ const allFields = [
   "speed_kmh",
   "heading_deg",
   "quality_avg",
+  // flags
+  "lte_ok",
+  "gnss_ok",
 ]
 
 // Updated command templates
@@ -136,10 +141,11 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [chartFields, setChartFields] = useState<string[]>(["voltage_v"])
+  const [desiredChartPoints, setDesiredChartPoints] = useState<number>(100)
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"])
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
-  const [timeRange, setTimeRange] = useState<TimeRange>("1m")
+  const [timeRange, setTimeRange] = useState<TimeRange>("12h")
   const [command, setCommand] = useState("")
   const [params, setParams] = useState<ParamItem[]>([])
   const [commandLoading, setCommandLoading] = useState(false)
@@ -153,21 +159,26 @@ export default function Home() {
   const [refreshIntervalChartSec, setRefreshIntervalChartSec] = useState(5)
   const [refreshTick, setRefreshTick] = useState(0)
   const [refreshingChart, setRefreshingChart] = useState(false)
+  // Chart X-axis auto-range toggle
+  const [autoRangeChart, setAutoRangeChart] = useState(true)
+  // Current visible range from Brush (ms) within the full selected range
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null)
   const [downsampleOptions, setDownsampleOptions] = useState<DownsampleOptions>({
     targetPoints: 100,
     method: 'average'
   })
+  // When the latest chart dataset arrived (ms since epoch)
+  const [lastReceivedAtMs, setLastReceivedAtMs] = useState<number | null>(null)
 
   // DECOUPLED: Fetches the last month of data specifically for the map
   const fetchMapData = (retryCount = 0) => {
     setMapLoading(true);
     const end = new Date();
-    const start = new Date(end.getTime() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 months prior to now
+    const start = new Date(end.getTime() - 3 * 24 * 60 * 60 * 1000); // last 3 days only
 
-    const offsetMs = (config.query?.utcOffsetHours ?? 0) * 60 * 60 * 1000
     const params = new URLSearchParams({
-      start: (start.getTime() - offsetMs).toString(),
-      end: (end.getTime() - offsetMs).toString(),
+      start: start.getTime().toString(),
+      end: end.getTime().toString(),
     });
 
     fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
@@ -180,20 +191,34 @@ export default function Home() {
         const normalized = normalizeRawData(rawDataArray)
         if (normalized.length > 0) {
           const latestDataPerDevice = new Map<string, RawDataItem>();
+          const hasValidLocation = (item: RawDataItem) => {
+            const lat = item.gnss?.lat ?? (item as any).lat;
+            const lon = item.gnss?.lon ?? (item as any).lon;
+            if (lat === undefined || lon === undefined) return false;
+            return !(lat === 0 && lon === 0);
+          };
           for (const item of normalized) {
+            if (!hasValidLocation(item)) continue;
             const existing = latestDataPerDevice.get(item.deviceID);
             if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
               latestDataPerDevice.set(item.deviceID, item);
             }
           }
-          const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map(item => ({
-            deviceId: item.deviceID,
-            latitude: item.gnss?.lat ?? (item as any).lat ?? 0,
-            longitude: item.gnss?.lon ?? (item as any).lon ?? 0,
-            timestamp: item.timestamp,
-            soc: (item as any).soc ?? 0,
-            efficiency: (item as any).efficiency ?? 0,
-          }));
+          const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map(item => {
+            const tsMs = new Date(item.timestamp).getTime()
+            const tsSatMs = tsMs - 6 * 60 * 60 * 1000 // minus 6h to SAT per request
+            // Randomized visual values
+            const randSoc = Math.round(20 + Math.random() * 80) // 20%..100%
+            const randEff = +(3 + Math.random() * 4).toFixed(1) // 3.0..7.0 km/kWh
+            return {
+              deviceId: item.deviceID,
+              latitude: item.gnss?.lat ?? (item as any).lat!,
+              longitude: item.gnss?.lon ?? (item as any).lon!,
+              timestamp: new Date(tsSatMs).toISOString(),
+              soc: randSoc,
+              efficiency: randEff,
+            }
+          });
           setLatestData(mapData);
         } else {
           setLatestData([]);
@@ -273,6 +298,9 @@ export default function Home() {
     } else {
       endMs = now
       switch (timeRange) {
+        case '1min': startMs = endMs - 1 * 60 * 1000; break
+        case '3min': startMs = endMs - 3 * 60 * 1000; break
+        case '5min': startMs = endMs - 5 * 60 * 1000; break
         case '15m': startMs = endMs - 15 * 60 * 1000; break
         case '1h': startMs = endMs - 60 * 60 * 1000; break
         case '6h': startMs = endMs - 6 * 60 * 60 * 1000; break
@@ -280,10 +308,8 @@ export default function Home() {
         case '24hr': startMs = endMs - 24 * 60 * 60 * 1000; break
         case '48h': startMs = endMs - 48 * 60 * 60 * 1000; break
         case '7d': startMs = endMs - 7 * 24 * 60 * 60 * 1000; break
-        case '14d': startMs = endMs - 14 * 24 * 60 * 60 * 1000; break
         case '1m': startMs = endMs - 30 * 24 * 60 * 60 * 1000; break
         case '3m': startMs = endMs - 90 * 24 * 60 * 60 * 1000; break
-        case '6m': startMs = endMs - 180 * 24 * 60 * 60 * 1000; break
         case '1y': startMs = endMs - 365 * 24 * 60 * 60 * 1000; break
         case 'max': startMs = 0; break
         default: startMs = endMs - 30 * 24 * 60 * 60 * 1000; break
@@ -293,32 +319,28 @@ export default function Home() {
     const silent = refreshingChart
     if (!silent) setLoading(true)
 
-    const offsetMs = (config.query?.utcOffsetHours ?? 0) * 60 * 60 * 1000
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
       if (!silent) setLoading(false)
       setRefreshingChart(false)
       setError("Please select valid start and end dates.")
       return
     }
-    const startTs = (Math.min(startMs, endMs) - offsetMs).toString()
-    const endTs = (Math.max(startMs, endMs) - offsetMs).toString()
+    const startTs = Math.min(startMs, endMs).toString()
+    const endTs = Math.max(startMs, endMs).toString()
     const params = new URLSearchParams({ start: startTs, end: endTs })
 
     fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
       .then(async (res) => {
         if (!res.ok) throw new Error(`Raw data API ${res.status}: ${await res.text()}`)
-        return res.json()
+        const receiveAtMs = Date.now() // capture as soon as response arrives
+        const json = await res.json()
+        return { json, receiveAtMs }
       })
-      .then((json) => {
+      .then(({ json, receiveAtMs }) => {
         const rawDataArray = Array.isArray(json) ? json : []
         const normalized = normalizeRawData(rawDataArray)
         setRawData(normalized)
-        if (normalized.length > 0) {
-          const downsampled = downsampleData(normalized, downsampleOptions)
-          setDownsampledData(downsampled)
-        } else {
-          setDownsampledData([])
-        }
+        setLastReceivedAtMs(receiveAtMs)
         if (!silent) setLoading(false)
         setRefreshingChart(false)
       })
@@ -328,7 +350,7 @@ export default function Home() {
         if (!silent) setLoading(false)
         setRefreshingChart(false)
       })
-  }, [auth.isAuthenticated, startDate, endDate, timeRange, downsampleOptions, refreshTick])
+  }, [auth.isAuthenticated, startDate, endDate, timeRange, refreshTick])
 
   // Handle time range changes
   useEffect(() => {
@@ -337,6 +359,15 @@ export default function Home() {
     let end: Date = now
 
     switch (timeRange) {
+      case "1min":
+        start = new Date(now.getTime() - 1 * 60 * 1000)
+        break
+      case "3min":
+        start = new Date(now.getTime() - 3 * 60 * 1000)
+        break
+      case "5min":
+        start = new Date(now.getTime() - 5 * 60 * 1000)
+        break
       case "15m":
         start = new Date(now.getTime() - 15 * 60 * 1000)
         break
@@ -358,17 +389,11 @@ export default function Home() {
       case "7d":
         start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
         break
-      case "14d":
-        start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-        break
       case "1m":
         start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
         break
       case "3m":
         start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-        break
-      case "6m":
-        start = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
         break
       case "1y":
         start = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
@@ -386,6 +411,48 @@ export default function Home() {
     setStartDate(start)
     setEndDate(end)
   }, [timeRange])
+  
+  // Reset brush selection when time range preset changes
+  useEffect(() => {
+    setVisibleRange(null)
+  }, [timeRange])
+
+  // Compute fixed x-domain for chart when auto-range is off
+  const xDomain: [number, number] | null = (() => {
+    if (!startDate || !endDate) return null
+    const a = startDate.getTime()
+    const b = endDate.getTime()
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null
+    return [Math.min(a, b), Math.max(a, b)]
+  })()
+
+  // Recompute downsampled series when raw data, desired points, options, or brush range change
+  useEffect(() => {
+    if (rawData.length === 0) {
+      setDownsampledData([])
+      return
+    }
+    // Filter to visible brush range if set, else use full
+    let subset = rawData
+    if (visibleRange && visibleRange.end > visibleRange.start) {
+      subset = rawData.filter(item => {
+        const t = new Date(item.timestamp).getTime()
+        return t >= visibleRange.start && t <= visibleRange.end
+      })
+      // If the visible subset is reasonably small, show all points (no downsampling)
+      const cap = 10000
+      if (subset.length <= cap) {
+        setDownsampledData(subset as unknown as ApiDataItem[])
+        return
+      }
+    }
+    // Otherwise, downsample to desired points, but never more than available or hard cap
+    const pts = Math.max(10, Math.min(desiredChartPoints, subset.length, 10000))
+    const downsampled = downsampleData(subset, { ...downsampleOptions, targetPoints: pts })
+    setDownsampledData(downsampled)
+  }, [rawData, downsampleOptions.method, desiredChartPoints, visibleRange])
+
+  // Removed prior auto-scaling of targetPoints; we filter the dataset by brush range and re-downsample
 
   // Filter downsampled data for display
   const filteredData = downsampledData.filter((item) => {
@@ -515,7 +582,7 @@ export default function Home() {
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-3xl font-bold tracking-tight mb-2">Fleet Command Center</h2>
+                  <h2 className="text-3xl font-bold tracking-tight mb-2 text-white">Fleet Command Center</h2>
                   <p className="text-lg text-blue-100 max-w-2xl">
                     Real-time monitoring and control for your connected vehicles
                   </p>
@@ -728,11 +795,11 @@ export default function Home() {
                               type="number"
                               min="10"
                               max="1000"
-                              value={downsampleOptions.targetPoints}
-                              onChange={(e) => setDownsampleOptions(prev => ({
-                                ...prev,
-                                targetPoints: parseInt(e.target.value) || 100
-                              }))}
+                              value={desiredChartPoints}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value) || 100
+                                setDesiredChartPoints(v)
+                              }}
                               className="w-24"
                             />
                           </div>
@@ -749,6 +816,17 @@ export default function Home() {
                         checkedTrackColor="bg-blue-500"
                         uncheckedTrackColor="bg-gray-300"
                         thumbColor="bg-blue-500"
+                        checked={autoRangeChart}
+                        onCheckedChange={setAutoRangeChart}
+                        id="auto-range-chart"
+                      />
+                      <Label htmlFor="auto-range-chart" className="text-sm text-slate-700 dark:text-slate-300">Auto Range</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checkedTrackColor="bg-blue-500"
+                        uncheckedTrackColor="bg-gray-300"
+                        thumbColor="bg-blue-500"
                         checked={autoRefreshChart}
                         onCheckedChange={setAutoRefreshChart}
                         id="auto-refresh-chart"
@@ -760,10 +838,11 @@ export default function Home() {
                       <Input
                         id="refresh-interval-chart"
                         type="number"
-                        min="1"
+                        min="0.1"
+                        step="0.1"
                         value={refreshIntervalChartSec}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value, 10)
+                          const val = parseFloat(e.target.value)
                           if (!isNaN(val) && val > 0) setRefreshIntervalChartSec(val)
                         }}
                         className="w-20"
@@ -788,6 +867,10 @@ export default function Home() {
                       chartFields={chartFields} 
                       loading={loading}
                       rawData={rawData}
+                      autoRange={autoRangeChart}
+                      xDomain={xDomain}
+                      lastReceivedAtMs={lastReceivedAtMs}
+                      onVisibleRangeChange={(range) => setVisibleRange(range)}
                     />
                   </div>
 
@@ -825,10 +908,11 @@ export default function Home() {
                         <Input
                           id="refresh-interval"
                           type="number"
-                          min="1"
+                          min="0.1"
+                          step="0.1"
                           value={refreshIntervalSec}
                           onChange={(e) => {
-                            const val = parseInt(e.target.value, 10)
+                            const val = parseFloat(e.target.value)
                             if (!isNaN(val) && val > 0) setRefreshIntervalSec(val)
                           }}
                           className="w-20"
@@ -885,6 +969,32 @@ export default function Home() {
                       <VehicleMap devices={latestData} />
                     )}
                   </div>
+                  {/* Fleet Info Block */}
+                  {latestData.length > 0 && (
+                    <div className="mt-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">Fleet Snapshot</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {latestData.map((d) => {
+                          const batteryKWh = 50
+                          const availableKWh = (batteryKWh * d.soc) / 100
+                          const estRangeKm = Math.round(availableKWh * d.efficiency)
+                          return (
+                            <div key={d.deviceId} className="flex items-center justify-between px-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                              <div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{d.deviceId}</div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400">Eff {d.efficiency.toFixed(1)} km/kWh</div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm text-slate-900 dark:text-slate-100">SoC {d.soc}%</div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400">~{estRangeKm} km</div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">Note: SoC and efficiency values are randomized for visualization. Range assumes a 50 kWh battery.</div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
