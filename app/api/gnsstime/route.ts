@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get AWS GNSS URL from environment
     const awsGnssUrl = process.env.AWS_GNSS_URL

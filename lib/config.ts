@@ -24,6 +24,12 @@ export const config = {
     revokeToken: "/api/revoke-token",
     rawData: "/api/raw-data",
   },
+  devices: {
+    defaultDeviceIds: (process.env.NEXT_PUBLIC_DEFAULT_DEVICE_IDS || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0),
+  },
   // Query behavior
   query: {
     // Optional UTC offset (hours) to shift start/end before sending to backend.

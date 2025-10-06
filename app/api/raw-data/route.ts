@@ -59,22 +59,35 @@ export async function GET(request: NextRequest) {
     }
 
     // ── ③ extract and validate query params ──
-    const start = searchParams.get("start")
-    const end = searchParams.get("end")
     const deviceId = searchParams.get("deviceId")
 
-    if (!start || !end) {
-      return NextResponse.json({ 
-        error: "Start and end parameters are required" 
+    if (!deviceId) {
+      return NextResponse.json({
+        error: "deviceId parameter is required"
       }, { status: 400 })
     }
 
-    const startMs = Number(start)
-    const endMs = Number(end)
-    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
-      return NextResponse.json({
-        error: "Invalid start or end timestamp"
-      }, { status: 400 })
+    const start = searchParams.get("start")
+    const end = searchParams.get("end")
+    const pageSize = searchParams.get("pageSize")
+    const nextKey = searchParams.get("nextKey")
+
+    if (start) {
+      const startMs = Number(start)
+      if (!Number.isFinite(startMs)) {
+        return NextResponse.json({
+          error: "Invalid start timestamp"
+        }, { status: 400 })
+      }
+    }
+
+    if (end) {
+      const endMs = Number(end)
+      if (!Number.isFinite(endMs)) {
+        return NextResponse.json({
+          error: "Invalid end timestamp"
+        }, { status: 400 })
+      }
     }
 
     // ── ④ get AWS raw data URL ──
@@ -87,10 +100,11 @@ export async function GET(request: NextRequest) {
     }
 
     // ── ⑤ build query string and forward request ──
-    const queryParams = new URLSearchParams({ start, end })
-    if (deviceId) {
-      queryParams.append("deviceId", deviceId)
-    }
+    const queryParams = new URLSearchParams({ deviceId })
+    if (start) queryParams.append("start", start)
+    if (end) queryParams.append("end", end)
+    if (pageSize) queryParams.append("pageSize", pageSize)
+    if (nextKey) queryParams.append("nextKey", nextKey)
     
     // console.log(`Raw data API: Fetching from ${awsRawDataUrl} with params:`, queryParams.toString())
     

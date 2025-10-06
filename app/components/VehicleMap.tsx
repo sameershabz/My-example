@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import type { Map as LeafletMap, LayerGroup } from "leaflet"
 import "leaflet/dist/leaflet.css"
 
 export interface DeviceData {
@@ -16,15 +17,18 @@ interface VehicleMapProps {
   devices: DeviceData[]
 }
 
+declare global {
+  interface Window {
+    L?: typeof import("leaflet")
+  }
+}
+
 function MapComponent({ devices }: VehicleMapProps) {
-  // Force display timezone (UTC+8)
-  const DISPLAY_TIMEZONE = "Asia/Singapore"
-
-  const mapRef = useRef<any>(null)
+  const DISPLAY_TIMEZONE = "Africa/Johannesburg"
+  const mapRef = useRef<LeafletMap | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const markerGroupRef = useRef<any>(null)
+  const markerGroupRef = useRef<LayerGroup | null>(null)
 
-  // Normalize timestamps: supports ISO strings, epoch seconds (10 digits), or epoch ms (13 digits)
   const toEpochMs = (ts: string | number): number => {
     if (ts === null || ts === undefined) return Date.now()
     if (typeof ts === 'number') {
@@ -43,43 +47,31 @@ function MapComponent({ devices }: VehicleMapProps) {
   }
 
   useEffect(() => {
-    let L: any = null
-
     const initMap = async () => {
       try {
         const leaflet = await import("leaflet")
-        L = leaflet.default
+        window.L = leaflet
 
-        // Expose for other effects
-        ;(window as any).L = L
-
-        // Fix default markers
-        delete (L.Icon.Default.prototype as any)._getIconUrl
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl:
-            "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-          iconUrl:
-            "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-          shadowUrl:
-            "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        const iconProto = leaflet.Icon.Default.prototype as unknown as { _getIconUrl?: unknown }
+        delete iconProto._getIconUrl
+        leaflet.Icon.Default.mergeOptions({
+          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
         })
 
         if (containerRef.current && !mapRef.current) {
-          mapRef.current = L.map(containerRef.current, {
-            center:
-              devices.length > 0
-                ? [devices[0].latitude, devices[0].longitude]
-                : [20, 0],
+          mapRef.current = leaflet.map(containerRef.current, {
+            center: devices.length > 0 ? [devices[0].latitude, devices[0].longitude] : [20, 0],
             zoom: devices.length === 1 ? 10 : 2,
             scrollWheelZoom: true,
           })
 
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "&copy; OpenStreetMap contributors",
           }).addTo(mapRef.current)
 
-          // initialize marker group
-          markerGroupRef.current = L.layerGroup().addTo(mapRef.current)
+          markerGroupRef.current = leaflet.layerGroup().addTo(mapRef.current)
         }
       } catch (error) {
         console.error("Error initializing map:", error)
@@ -92,25 +84,25 @@ function MapComponent({ devices }: VehicleMapProps) {
       if (mapRef.current) {
         try {
           mapRef.current.remove()
-        } catch (e) {
-          console.warn("Map cleanup error:", e)
+        } catch (error) {
+          console.warn("Map cleanup error:", error)
         }
         mapRef.current = null
       }
     }
-  }, []) // run once
+  }, [])
 
   useEffect(() => {
-    if (!mapRef.current || !(window as any).L) return
+    if (!mapRef.current || !window.L) return
+    const leaflet = window.L
     const map = mapRef.current
-    const L = (window as any).L
-    const mg = markerGroupRef.current
-    if (!mg) return
+    const markerGroup = markerGroupRef.current
+    if (!markerGroup) return
 
-    mg.clearLayers()
+    markerGroup.clearLayers()
     devices.forEach((device) => {
       const tsMs = toEpochMs(device.timestamp)
-      const marker = L.marker([device.latitude, device.longitude]).bindPopup(`
+      const marker = leaflet.marker([device.latitude, device.longitude]).bindPopup(`
         <div style="color:#000;">
           <strong style="color:#000;">${device.deviceId}</strong><br/>
           Timestamp: ${new Date(tsMs).toLocaleString(undefined, { timeZone: DISPLAY_TIMEZONE, hour12: false })}<br/>
@@ -120,27 +112,25 @@ function MapComponent({ devices }: VehicleMapProps) {
           Efficiency: ${device.efficiency.toFixed(1)} km/kWh
         </div>
       `)
-      marker.addTo(mg)
+      marker.addTo(markerGroup)
     })
 
     if (devices.length > 1) {
       const bounds = devices.map((d) => [d.latitude, d.longitude] as [number, number])
       try {
         map.fitBounds(bounds, { padding: [20, 20] })
-      } catch (e) {
-        console.warn("Error fitting bounds:", e)
+      } catch (error) {
+        console.warn("Error fitting bounds:", error)
       }
     } else if (devices.length === 1) {
-      map.setView([devices[0].latitude, devices[0].longitude], 10) 
+      map.setView([devices[0].latitude, devices[0].longitude], 10)
     }
 
-    // This is crucial for maps in hidden tabs
     setTimeout(() => {
       if (mapRef.current) {
-        mapRef.current.invalidateSize();
+        mapRef.current.invalidateSize()
       }
-    }, 100);
-
+    }, 100)
   }, [devices])
 
   if (devices.length === 0) {

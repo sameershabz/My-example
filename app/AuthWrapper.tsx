@@ -17,35 +17,36 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [isInitialized, setIsInitialized] = useState(false)
+  const { isLoading, isAuthenticated, error, clearStaleState } = auth
 
   // 2) Handle auth state changes
   useEffect(() => {
     // Wait for auth to initialize
-    if (auth.isLoading) return
+    if (isLoading) return
 
     setIsInitialized(true)
 
     // Handle auth errors (like "no matching state")
-    if (auth.error) {
-      console.warn("Auth error:", auth.error)
+    if (error) {
+      console.warn("Auth error:", error)
       // Clear the error and redirect to signin
-      auth.clearStaleState()
+      clearStaleState()
       router.replace("/signin")
       return
     }
 
     // If not authenticated, redirect to signin
-    if (!auth.isAuthenticated) {
+    if (!isAuthenticated) {
       router.replace("/signin")
     }
-  }, [auth.isLoading, auth.isAuthenticated, auth.error, router])
+  }, [isLoading, isAuthenticated, error, clearStaleState, router])
 
   // 1) If user is on /signin, don't protect the page
   if (pathname === "/signin" || pathname === "/auth/callback" || pathname === "/logout-callback") {
     return <>{children}</>
   }
   // Show loading while initializing
-  if (!isInitialized || auth.isLoading) {
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -57,7 +58,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   // Show nothing if there's an error or not authenticated
-  if (auth.error || !auth.isAuthenticated) {
+  if (error || !isAuthenticated) {
     return null
   }
 

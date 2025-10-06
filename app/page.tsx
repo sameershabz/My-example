@@ -1,24 +1,20 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "react-oidc-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { format } from "date-fns"
-import { CalendarIcon, RefreshCw, Plus, Trash, Loader2, Send, Settings, Filter, Clock, Download, MapPin, Activity, Zap, LogOut } from "lucide-react"
+import { RefreshCw, Plus, Trash, Loader2, Send, Settings, Filter, Clock, MapPin, Activity, Zap, LogOut } from "lucide-react"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
-import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker"
-import TextField from "@mui/material/TextField"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import DataChart1 from "./components/DataChart1"
 import dynamic from "next/dynamic"
-import type { ApiDataItem } from "./components/DataChart1"
 import type { DeviceData } from "./components/VehicleMap"
 import type { RawDataItem, DownsampleOptions } from "@/lib/data-processor"
 import { downsampleData, normalizeRawData } from "@/lib/data-processor"
@@ -135,17 +131,19 @@ const commandTemplates = [
 
 export default function Home() {
   const auth = useAuth()
+  const defaultDeviceIds = config.devices.defaultDeviceIds
   const [activeTab, setActiveTab] = useState("chart")
   const [rawData, setRawData] = useState<RawDataItem[]>([])
-  const [downsampledData, setDownsampledData] = useState<ApiDataItem[]>([])
+  const [downsampledData, setDownsampledData] = useState<RawDataItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [chartFields, setChartFields] = useState<string[]>(["voltage_v"])
   const [desiredChartPoints, setDesiredChartPoints] = useState<number>(100)
+  const [availableDevices, setAvailableDevices] = useState<string[]>(defaultDeviceIds)
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["all"])
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
-  const [timeRange, setTimeRange] = useState<TimeRange>("12h")
+  const [timeRange, setTimeRange] = useState<TimeRange>("7d")
   const [command, setCommand] = useState("")
   const [params, setParams] = useState<ParamItem[]>([])
   const [commandLoading, setCommandLoading] = useState(false)
@@ -161,96 +159,30 @@ export default function Home() {
   const [refreshingChart, setRefreshingChart] = useState(false)
   // Chart X-axis auto-range toggle
   const [autoRangeChart, setAutoRangeChart] = useState(true)
-  // Current visible range from Brush (ms) within the full selected range
-  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null)
-  const [downsampleOptions, setDownsampleOptions] = useState<DownsampleOptions>({
-    targetPoints: 100,
-    method: 'average'
-  })
+  const downsampleMethod: DownsampleOptions['method'] = 'average'
   // When the latest chart dataset arrived (ms since epoch)
   const [lastReceivedAtMs, setLastReceivedAtMs] = useState<number | null>(null)
 
-  // DECOUPLED: Fetches the last month of data specifically for the map
-  const fetchMapData = (retryCount = 0) => {
-    setMapLoading(true);
-    const end = new Date();
-    const start = new Date(end.getTime() - 3 * 24 * 60 * 60 * 1000); // last 3 days only
+  const PAGE_SIZE = 2500
+  const MAX_PAGES = 50
 
-    const params = new URLSearchParams({
-      start: start.getTime().toString(),
-      end: end.getTime().toString(),
-    });
+  const arraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false
+    return a.every((value, index) => value === b[index])
+  }
 
-    fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Map Data API ${res.status}: ${await res.text()}`);
-        return res.json();
-      })
-      .then((data) => {
-        const rawDataArray = Array.isArray(data) ? data : [];
-        const normalized = normalizeRawData(rawDataArray)
-        if (normalized.length > 0) {
-          const latestDataPerDevice = new Map<string, RawDataItem>();
-          const hasValidLocation = (item: RawDataItem) => {
-            const lat = item.gnss?.lat ?? (item as any).lat;
-            const lon = item.gnss?.lon ?? (item as any).lon;
-            if (lat === undefined || lon === undefined) return false;
-            return !(lat === 0 && lon === 0);
-          };
-          for (const item of normalized) {
-            if (!hasValidLocation(item)) continue;
-            const existing = latestDataPerDevice.get(item.deviceID);
-            if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
-              latestDataPerDevice.set(item.deviceID, item);
-            }
-          }
-          const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map(item => {
-            const tsMs = new Date(item.timestamp).getTime()
-            const tsSatMs = tsMs - 6 * 60 * 60 * 1000 // minus 6h to SAT per request
-            // Randomized visual values
-            const randSoc = Math.round(20 + Math.random() * 80) // 20%..100%
-            const randEff = +(3 + Math.random() * 4).toFixed(1) // 3.0..7.0 km/kWh
-            return {
-              deviceId: item.deviceID,
-              latitude: item.gnss?.lat ?? (item as any).lat!,
-              longitude: item.gnss?.lon ?? (item as any).lon!,
-              timestamp: new Date(tsSatMs).toISOString(),
-              soc: randSoc,
-              efficiency: randEff,
-            }
-          });
-          setLatestData(mapData);
-        } else {
-          setLatestData([]);
-        }
-      })
-      .catch(err => {
-        console.error("Failed to fetch map data:", err);
-        setError(err.message); // You might want a separate mapError state
-      })
-      .finally(() => {
-        setMapLoading(false);
-        
-        // Auto-retry once if this was the first attempt and we got no data
-        if (retryCount === 0 && latestData.length === 0) {
-          setTimeout(() => {
-            console.log("Auto-retrying map data fetch...");
-            fetchMapData(1);
-          }, 1000);
-        }
-      });
-  };
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object'
 
-  // Initial data fetch for the map - do two refreshes at startup
+  const refreshMapData = useCallback(() => {
+    setMapLoading(true)
+    setRefreshTick((t) => t + 1)
+  }, [])
+
   useEffect(() => {
-    if (auth.isAuthenticated) {
-      fetchMapData();
-      // Second refresh after a short delay to ensure map loads properly
-      setTimeout(() => {
-        fetchMapData();
-      }, 2000);
-    }
-  }, [auth.isAuthenticated]);
+    if (!auth.isAuthenticated) return
+    refreshMapData()
+  }, [auth.isAuthenticated, refreshMapData])
 
   // Auto-refresh logic for the map
   useEffect(() => {
@@ -258,13 +190,76 @@ export default function Home() {
     if (autoRefresh && activeTab === 'map') {
       interval = setInterval(() => {
         console.log("Auto-refreshing map data...")
-        fetchMapData()
+        refreshMapData()
       }, refreshIntervalSec * 1000)
     }
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [autoRefresh, refreshIntervalSec, activeTab])
+  }, [autoRefresh, refreshIntervalSec, activeTab, refreshMapData])
+
+  useEffect(() => {
+    if (rawData.length === 0) {
+      setLatestData([])
+      setMapLoading(false)
+      return
+    }
+
+    const latestDataPerDevice = new Map<string, RawDataItem>()
+    const hasValidLocation = (item: RawDataItem) => {
+      const latValue = item.gnss?.lat ?? item.lat
+      const lonValue = item.gnss?.lon ?? item.lon
+      if (latValue === undefined || lonValue === undefined) return false
+      return !(latValue === 0 && lonValue === 0)
+    }
+
+    for (const item of rawData) {
+      if (!hasValidLocation(item)) continue
+      const existing = latestDataPerDevice.get(item.deviceID)
+      if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
+        latestDataPerDevice.set(item.deviceID, item)
+      }
+    }
+
+    const mapData: DeviceData[] = Array.from(latestDataPerDevice.values()).map((item) => {
+      const tsMs = new Date(item.timestamp).getTime()
+      const tsSatMs = tsMs - 6 * 60 * 60 * 1000 // minus 6h to SAT per request
+      const randSoc = Math.round(20 + Math.random() * 80)
+      const randEff = +(3 + Math.random() * 4).toFixed(1)
+      const latValue = item.gnss?.lat ?? item.lat
+      const lonValue = item.gnss?.lon ?? item.lon
+      if (typeof latValue !== 'number' || typeof lonValue !== 'number') {
+        return null
+      }
+      return {
+        deviceId: item.deviceID,
+        latitude: latValue,
+        longitude: lonValue,
+        timestamp: new Date(tsSatMs).toISOString(),
+        soc: randSoc,
+        efficiency: randEff,
+      }
+    }).filter((entry): entry is DeviceData => entry !== null)
+
+    setLatestData(mapData)
+    setMapLoading(false)
+  }, [rawData])
+
+  useEffect(() => {
+    const combined = Array.from(new Set([
+      ...defaultDeviceIds,
+      ...rawData.map((d) => d.deviceID)
+    ])).sort()
+
+    setAvailableDevices((prev) => (arraysEqual(prev, combined) ? prev : combined))
+  }, [rawData, defaultDeviceIds])
+
+  useEffect(() => {
+    if (selectedDevices.includes("all")) return
+    const filtered = selectedDevices.filter((id) => availableDevices.includes(id))
+    if (filtered.length === selectedDevices.length) return
+    setSelectedDevices(filtered.length ? filtered : ["all"])
+  }, [availableDevices, selectedDevices])
 
   // Auto-refresh logic for the chart
   useEffect(() => {
@@ -287,12 +282,16 @@ export default function Home() {
 
     setError("")
 
-    // Compute fetch window: dynamic for non-custom, from state for custom
     const now = Date.now()
     let startMs: number
     let endMs: number
+
     if (timeRange === 'custom') {
-      if (!startDate || !endDate) return
+      if (!startDate || !endDate) {
+        setRefreshingChart(false)
+        setMapLoading(false)
+        return
+      }
       startMs = startDate.getTime()
       endMs = endDate.getTime()
     } else {
@@ -323,40 +322,140 @@ export default function Home() {
       if (!silent) setLoading(false)
       setRefreshingChart(false)
       setError("Please select valid start and end dates.")
+      setMapLoading(false)
       return
     }
+
     const startTs = Math.min(startMs, endMs).toString()
     const endTs = Math.max(startMs, endMs).toString()
-    const params = new URLSearchParams({ start: startTs, end: endTs })
 
-    fetch(`${config.api.rawData}?${params}`, { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Raw data API ${res.status}: ${await res.text()}`)
-        const receiveAtMs = Date.now() // capture as soon as response arrives
-        const json = await res.json()
-        return { json, receiveAtMs }
-      })
-      .then(({ json, receiveAtMs }) => {
-        const rawDataArray = Array.isArray(json) ? json : []
-        const normalized = normalizeRawData(rawDataArray)
-        setRawData(normalized)
-        setLastReceivedAtMs(receiveAtMs)
-        if (!silent) setLoading(false)
-        setRefreshingChart(false)
-      })
-      .catch((err) => {
+    const effectiveDevices = (() => {
+      const base = selectedDevices.includes("all") || selectedDevices.length === 0
+        ? (availableDevices.length ? availableDevices : defaultDeviceIds)
+        : selectedDevices
+      return Array.from(new Set(base)).filter((id) => id && id.length > 0)
+    })()
+
+    if (effectiveDevices.length === 0) {
+      setRawData([])
+      setRefreshingChart(false)
+      if (!silent) setLoading(false)
+      setMapLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    setMapLoading(true)
+
+    const fetchDevices = async () => {
+      try {
+        const aggregated: Record<string, unknown>[] = []
+
+        for (const deviceId of effectiveDevices) {
+          let nextKey: string | null = null
+          let pageCount = 0
+
+          do {
+            const params = new URLSearchParams({
+              deviceId,
+              pageSize: PAGE_SIZE.toString(),
+            })
+            if (startTs) params.set("start", startTs)
+            if (endTs) params.set("end", endTs)
+            if (nextKey) params.set("nextKey", nextKey)
+
+            const response = await fetch(`${config.api.rawData}?${params.toString()}`, {
+              credentials: "include",
+              signal: controller.signal,
+            })
+
+            if (!response.ok) {
+              const errorText = await response.text()
+              throw new Error(`Raw data API ${response.status}: ${errorText}`)
+            }
+
+            const payload = (await response.json()) as {
+              items?: unknown[]
+              nextKey?: string | null
+              error?: string
+            }
+
+            if (payload.error) {
+              throw new Error(payload.error)
+            }
+
+            const items = Array.isArray(payload.items) ? payload.items : []
+            items.forEach((itemRaw) => {
+              if (!isRecord(itemRaw)) return
+              const normalizedItem: Record<string, unknown> = { ...itemRaw }
+              const resolvedDeviceId = normalizedItem.deviceID ?? normalizedItem.deviceId ?? deviceId
+              normalizedItem.deviceID = String(resolvedDeviceId ?? deviceId)
+              aggregated.push(normalizedItem)
+            })
+
+            nextKey = payload.nextKey ?? null
+            pageCount += 1
+
+            if (pageCount > MAX_PAGES) {
+              console.warn(`Reached page limit (${MAX_PAGES}) for device`, deviceId)
+              break
+            }
+          } while (nextKey && !controller.signal.aborted)
+
+          if (controller.signal.aborted) break
+        }
+
+        if (controller.signal.aborted) return
+
+        const normalized = normalizeRawData(aggregated)
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
+        const dedupedMap = new Map<string, RawDataItem>()
+        normalized.forEach((item) => {
+          const key = `${item.deviceID}-${item.timestamp}`
+          dedupedMap.set(key, item)
+        })
+
+        const dedupedNormalized = Array.from(dedupedMap.values()).sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
+
+        setRawData(dedupedNormalized)
+        setLastReceivedAtMs(Date.now())
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error("Raw data fetch error:", err)
-        setError(err.message)
+        setError(err instanceof Error ? err.message : 'Failed to fetch data')
+        setRawData([])
+      } finally {
         if (!silent) setLoading(false)
         setRefreshingChart(false)
-      })
-  }, [auth.isAuthenticated, startDate, endDate, timeRange, refreshTick])
+        setMapLoading(false)
+      }
+    }
+
+    fetchDevices()
+
+    return () => {
+      controller.abort()
+    }
+  }, [
+    auth.isAuthenticated,
+    startDate,
+    endDate,
+    timeRange,
+    refreshTick,
+    selectedDevices,
+    availableDevices,
+    refreshingChart,
+    defaultDeviceIds,
+  ])
 
   // Handle time range changes
   useEffect(() => {
     const now = new Date()
     let start: Date
-    let end: Date = now
+    const end: Date = now
 
     switch (timeRange) {
       case "1min":
@@ -412,11 +511,6 @@ export default function Home() {
     setEndDate(end)
   }, [timeRange])
   
-  // Reset brush selection when time range preset changes
-  useEffect(() => {
-    setVisibleRange(null)
-  }, [timeRange])
-
   // Compute fixed x-domain for chart when auto-range is off
   const xDomain: [number, number] | null = (() => {
     if (!startDate || !endDate) return null
@@ -426,35 +520,18 @@ export default function Home() {
     return [Math.min(a, b), Math.max(a, b)]
   })()
 
-  // Recompute downsampled series when raw data, desired points, options, or brush range change
+  // Recompute downsampled series when raw data or desired resolution changes
   useEffect(() => {
     if (rawData.length === 0) {
       setDownsampledData([])
       return
     }
-    // Filter to visible brush range if set, else use full
-    let subset = rawData
-    if (visibleRange && visibleRange.end > visibleRange.start) {
-      subset = rawData.filter(item => {
-        const t = new Date(item.timestamp).getTime()
-        return t >= visibleRange.start && t <= visibleRange.end
-      })
-      // If the visible subset is reasonably small, show all points (no downsampling)
-      const cap = 10000
-      if (subset.length <= cap) {
-        setDownsampledData(subset as unknown as ApiDataItem[])
-        return
-      }
-    }
-    // Otherwise, downsample to desired points, but never more than available or hard cap
-    const pts = Math.max(10, Math.min(desiredChartPoints, subset.length, 10000))
-    const downsampled = downsampleData(subset, { ...downsampleOptions, targetPoints: pts })
+
+    const targetPoints = Math.max(10, Math.min(desiredChartPoints, rawData.length, 10000))
+    const downsampled = downsampleData(rawData, { method: downsampleMethod, targetPoints })
     setDownsampledData(downsampled)
-  }, [rawData, downsampleOptions.method, desiredChartPoints, visibleRange])
+  }, [rawData, desiredChartPoints, downsampleMethod])
 
-  // Removed prior auto-scaling of targetPoints; we filter the dataset by brush range and re-downsample
-
-  // Filter downsampled data for display
   const filteredData = downsampledData.filter((item) => {
     if (!selectedDevices.includes("all") && !selectedDevices.includes(item.deviceID)) {
       return false
@@ -738,7 +815,7 @@ export default function Home() {
                       </AccordionTrigger>
                       <AccordionContent className="px-4 pb-4">
                         <div className="flex flex-wrap gap-2">
-                          {["all", ...new Set(rawData.map((d) => d.deviceID))].map((dev) => (
+                          {["all", ...availableDevices].map((dev) => (
                             <Button
                               key={dev}
                               variant={selectedDevices.includes(dev) ? "default" : "outline"}
@@ -794,7 +871,7 @@ export default function Home() {
                               id="downsample-points"
                               type="number"
                               min="10"
-                              max="1000"
+                              max="100000"
                               value={desiredChartPoints}
                               onChange={(e) => {
                                 const v = parseInt(e.target.value) || 100
@@ -870,7 +947,6 @@ export default function Home() {
                       autoRange={autoRangeChart}
                       xDomain={xDomain}
                       lastReceivedAtMs={lastReceivedAtMs}
-                      onVisibleRangeChange={(range) => setVisibleRange(range)}
                     />
                   </div>
 
@@ -921,10 +997,7 @@ export default function Home() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          fetchMapData();
-                          setTimeout(() => fetchMapData(), 1000);
-                        }}
+                        onClick={refreshMapData}
                         disabled={mapLoading}
                         className="flex items-center space-x-2"
                       >
@@ -950,14 +1023,11 @@ export default function Home() {
                           No Location Data Available
                         </h3>
                         <p className="text-slate-600 dark:text-slate-400 text-center max-w-md">
-                          No devices have reported location data in the last month. Check your device connections or try refreshing.
+                          No devices have reported location data in the selected range. Check your device connections or try refreshing.
                         </p>
                         <Button
                           variant="outline"
-                          onClick={() => {
-                            fetchMapData();
-                            setTimeout(() => fetchMapData(), 1000);
-                          }}
+                          onClick={refreshMapData}
                           disabled={mapLoading}
                           className="mt-4 flex items-center space-x-2"
                         >

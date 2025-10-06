@@ -36,8 +36,10 @@ Required environment variables (see `.env.example`):
 - `AWS_GNSS_URL` - AWS GNSS service endpoint
 - `AWS_COMMAND_URL` - AWS command service endpoint  
 - `AWS_QUERY_URL` - AWS query service endpoint
+- `AWS_RAW_DATA_URL` - AWS raw data service endpoint
 - `COGNITO_CLIENT_ID` - AWS Cognito client ID
 - `COGNITO_DOMAIN` - AWS Cognito domain
+- `NEXT_PUBLIC_DEFAULT_DEVICE_IDS` - Comma-separated fallback list of device IDs for initial data fetches
 
 ### Deployment
 

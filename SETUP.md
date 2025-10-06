@@ -20,6 +20,9 @@ AWS_COMMAND_URL=https://your-api-gateway-url/command
 AWS_GNSS_URL=https://your-api-gateway-url/gnss
 AWS_QUERY_URL=https://your-api-gateway-url/query
 AWS_RAW_DATA_URL=https://your-api-gateway-url/raw-data
+
+# Frontend Defaults
+NEXT_PUBLIC_DEFAULT_DEVICE_IDS=device-001,device-002
 ```
 
 ## Key Improvements Made
@@ -74,8 +77,9 @@ npm start
 The AWS backend should provide these endpoints:
 
 1. **Raw Data Endpoint** (`AWS_RAW_DATA_URL`)
-   - Accepts: `start`, `end`, `deviceId` (optional)
-   - Returns: Raw JSON data from Timestream
+   - Accepts: `deviceId` (required), optional `start`, `end`, `pageSize`, `nextKey`
+   - Returns: `{ items: [...], nextKey: string | null, count: number }`
+   - Notes: Items are returned in raw DynamoDB form; the frontend handles flattening, sorting, and derived fields
 
 2. **Command Endpoint** (`AWS_COMMAND_URL`)
    - Accepts: Command and parameters
