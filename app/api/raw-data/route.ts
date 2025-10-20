@@ -105,6 +105,9 @@ export async function GET(request: NextRequest) {
     if (end) queryParams.append("end", end)
     if (pageSize) queryParams.append("pageSize", pageSize)
     if (nextKey) queryParams.append("nextKey", nextKey)
+    queryParams.append("gzip", "1")
+
+
     
     // console.log(`Raw data API: Fetching from ${awsRawDataUrl} with params:`, queryParams.toString())
     

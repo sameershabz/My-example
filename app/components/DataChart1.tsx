@@ -13,6 +13,7 @@ import {
   Tooltip,
   Brush,
   type LegendPayload,
+  type TooltipPropsValueType,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, EyeOff, Info } from "lucide-react";
@@ -98,6 +99,19 @@ export default function DataChart1({
   const [showDelay, setShowDelay] = useState(false);
   const [brushRange, setBrushRange] = useState<{ startTs: number; endTs: number } | null>(null);
   const infoRef = useRef<HTMLDivElement>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    const syncMode = () => setIsDarkMode(root.classList.contains("dark"));
+    const observer = new MutationObserver(syncMode);
+
+    syncMode();
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, []);
 
   const resolveFieldValue = (item: RawDataItem | undefined, field: string): number | null => {
     if (!item) return null;
@@ -419,6 +433,49 @@ export default function DataChart1({
     );
   }
 
+  // Custom tooltip to ensure item values render as white text
+  const CustomTooltip = ({ active, label, payload }: { active?: boolean; label?: number; payload?: any[] }) => {
+    if (!active || !payload || payload.length === 0) return null;
+    return (
+      <div
+        className="recharts-default-tooltip"
+        style={{
+          backgroundColor: "#1e293b",
+          border: "1px solid #334155",
+          borderRadius: 8,
+          boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+          padding: 10,
+        }}
+      >
+        <p className="recharts-tooltip-label" style={{ color: "#94a3b8", margin: 0 }}>
+          {typeof label === "number"
+            ? new Date(label).toLocaleString(undefined, {
+                timeZone: DISPLAY_TIMEZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              })
+            : label}
+        </p>
+        <ul className="recharts-tooltip-item-list" style={{ listStyle: "none", padding: 0, margin: "6px 0 0 0" }}>
+          {payload.map((entry, idx) => (
+            <li key={idx} className="recharts-tooltip-item" style={{ color: "#f8fafc", margin: 0 }}>
+              <span className="recharts-tooltip-item-name" style={{ color: "#cbd5e1" }}>{entry.name}</span>
+              <span className="recharts-tooltip-item-separator" style={{ color: "#cbd5e1", margin: "0 6px" }}>
+                :
+              </span>
+              <span className="recharts-tooltip-item-value" style={{ color: "#ffffff" }}>{entry.value}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -479,7 +536,10 @@ export default function DataChart1({
                   type="number"
                   domain={brushDomain ?? (autoRange || !xDomain ? ["auto", "auto"] : [xDomain[0], xDomain[1]])}
                   scale="time"
-                  height={60}
+                  height={80}
+                  angle={-90}
+                  textAnchor="end"
+                  tickMargin={12}
                   tickFormatter={(v: number) => new Date(v).toLocaleString(undefined, {
                     timeZone: DISPLAY_TIMEZONE,
                     year: "numeric",
@@ -489,14 +549,14 @@ export default function DataChart1({
                     minute: "2-digit",
                     hour12: false,
                   })}
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontsize: 22, fontWeight: "bold", fill: "#64748b" }}
                   axisLine={{ stroke: "#e2e8f0" }}
                   tickLine={{ stroke: "#e2e8f0" }}
                 />
                 <YAxis
                   yAxisId="primary"
                   domain={["auto", "auto"]}
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 20, fontWeight: "bold" , fill: "#64748b" }}
                   axisLine={{ stroke: "#e2e8f0" }}
                   tickLine={{ stroke: "#e2e8f0" }}
                   label={showBooleanAxis && primaryAxisLabel
@@ -505,7 +565,7 @@ export default function DataChart1({
                         angle: -90,
                         position: "insideLeft",
                         offset: -5,
-                        style: { fill: "#94a3b8", fontSize: 12 },
+                        style: { fill: "#94a3b8", fontSize: 20, fontWeight: "bold"  },
                       }
                     : undefined}
                 />
@@ -516,7 +576,7 @@ export default function DataChart1({
                     ticks={[0, 1]}
                     orientation="right"
                     tickFormatter={formatBooleanAxisTick}
-                    tick={{ fontSize: 12, fill: "#64748b" }}
+                    tick={{ fontSize: 20, fontWeight: "bold" , fill: "#64748b" }}
                     axisLine={{ stroke: "#e2e8f0" }}
                     tickLine={{ stroke: "#e2e8f0" }}
                     label={booleanAxisLabel
@@ -525,33 +585,12 @@ export default function DataChart1({
                           angle: 90,
                           position: "insideRight",
                           offset: -5,
-                          style: { fill: "#94a3b8", fontSize: 12 },
+                          style: { fill: "#94a3b8", fontSize: 20, fontWeight: "bold"  },
                         }
                       : undefined}
                   />
                 )}
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #334155",
-                    borderRadius: "8px",
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
-                  }}
-                  itemStyle={{ color: "#f1f5f9" }}
-                  labelStyle={{ color: "#94a3b8" }}
-                  labelFormatter={(label: number) =>
-                    new Date(label).toLocaleString(undefined, {
-                      timeZone: DISPLAY_TIMEZONE,
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                      hour12: false,
-                    })
-                  }
-                />
+                <Tooltip content={<CustomTooltip />} />
                 {showLegend && (
                   <Legend
                     onClick={handleLegendClick}
@@ -564,6 +603,7 @@ export default function DataChart1({
                 {seriesKeys.map((key, i) => {
                   const { field } = splitSeriesKey(key);
                   const isBooleanSeries = BOOLEAN_FIELDS.has(field);
+                  const dotStrokeColor = isDarkMode ? "#fff" : "#000";
                   return (
                     <Line
                       key={key}
@@ -572,8 +612,8 @@ export default function DataChart1({
                       stroke={getColor(i)}
                       strokeWidth={2}
                       connectNulls
-                      dot={{ r: 3, fill: getColor(i), strokeWidth: 2, stroke: "#fff" }}
-                      activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
+                      dot={{ r: 3, fill: getColor(i), strokeWidth: 1, stroke: dotStrokeColor }}
+                      activeDot={{ r: 6, stroke: dotStrokeColor, strokeWidth: 2 }}
                       hide={hidden.has(key)}
                       yAxisId={isBooleanSeries ? "bool" : "primary"}
                       type={isBooleanSeries ? "stepAfter" : "linear"}
