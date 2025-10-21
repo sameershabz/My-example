@@ -525,10 +525,15 @@ export default function DataChart1({
 
       <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-6">
         <div className="relative">
-          <ResponsiveContainer width="100%" height={500}>
+          <ResponsiveContainer width="100%" height={660}>
             <LineChart
               data={rows}
-              margin={{ top: 20, right: showBooleanAxis ? 80 : 30, bottom: 80, left: showBooleanAxis && primaryAxisLabel ? 40 : 20 }}
+              margin={{
+                top: 20,
+                right: showBooleanAxis ? 80 : 30,
+                bottom: 120,
+                left: showBooleanAxis && primaryAxisLabel ? 40 : 20,
+              }}
             >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                 <XAxis
@@ -536,7 +541,7 @@ export default function DataChart1({
                   type="number"
                   domain={brushDomain ?? (autoRange || !xDomain ? ["auto", "auto"] : [xDomain[0], xDomain[1]])}
                   scale="time"
-                  height={80}
+                  height={200}
                   angle={-90}
                   textAnchor="end"
                   tickMargin={12}
